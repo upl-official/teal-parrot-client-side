@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AddressForm } from "@/components/account/address-form"
-import { AddressList } from "@/components/account/address-list"
+import { AddressListWrapper } from "@/components/account/address-list-wrapper"
 import { AnimatedContainer } from "@/components/animated/animated-container"
 import { useAuthStore } from "@/lib/auth"
 import type { Address } from "@/lib/types"
@@ -43,11 +43,13 @@ export function AddressesContent() {
             <CardTitle>Your Addresses</CardTitle>
           </CardHeader>
           <CardContent>
-            <AddressList
-              refreshTrigger={refreshTrigger}
-              onAddressDeleted={handleAddressDeleted}
-              onAddressUpdated={handleAddressUpdated}
-            />
+            <Suspense fallback={<div>Loading address list...</div>}>
+              <AddressListWrapper
+                refreshTrigger={refreshTrigger}
+                onAddressDeleted={handleAddressDeleted}
+                onAddressUpdated={handleAddressUpdated}
+              />
+            </Suspense>
           </CardContent>
         </Card>
       </div>
