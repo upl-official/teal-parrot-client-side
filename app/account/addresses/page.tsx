@@ -1,10 +1,5 @@
-import { Suspense } from "react"
-import { AddressesPage } from "@/components/account/addresses-page"
+import AddressesClientWrapper from "./client-wrapper"
 
-export default function AddressesRoute() {
-  return (
-    <Suspense fallback={<div className="p-6 text-center">Loading addresses...</div>}>
-      <AddressesPage />
-    </Suspense>
-  )
+export default function AddressesPage() {
+  return <AddressesClientWrapper />
 }

@@ -4,7 +4,6 @@ import { useState } from "react"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -69,31 +68,19 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
   }
 
   return (
-    <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <div className="space-y-6">
       {error && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-        >
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </motion.div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {success && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-        >
-          <Alert className="bg-green-50 border-green-200">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <AlertDescription className="text-green-700">{success}</AlertDescription>
-          </Alert>
-        </motion.div>
+        <Alert className="bg-green-50 border-green-200">
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <AlertDescription className="text-green-700">{success}</AlertDescription>
+        </Alert>
       )}
 
       <Form {...form}>
@@ -175,6 +162,6 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
           </div>
         </form>
       </Form>
-    </motion.div>
+    </div>
   )
 }
