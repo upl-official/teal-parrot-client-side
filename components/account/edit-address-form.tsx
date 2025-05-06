@@ -68,25 +68,6 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
     }
   }
 
-  const formVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  }
-
-  const formItemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.3 },
-    },
-  }
-
   return (
     <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       {error && (
@@ -116,30 +97,22 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
       )}
 
       <Form {...form}>
-        <motion.form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-4"
-          variants={formVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div variants={formItemVariants}>
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Address</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Main St, Apt 4B" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address</FormLabel>
+                <FormControl>
+                  <Input placeholder="123 Main St, Apt 4B" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <motion.div variants={formItemVariants} className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="city"
@@ -167,25 +140,23 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
                 </FormItem>
               )}
             />
-          </motion.div>
+          </div>
 
-          <motion.div variants={formItemVariants}>
-            <FormField
-              control={form.control}
-              name="pincode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pincode</FormLabel>
-                  <FormControl>
-                    <Input placeholder="10001" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
+          <FormField
+            control={form.control}
+            name="pincode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Pincode</FormLabel>
+                <FormControl>
+                  <Input placeholder="10001" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <motion.div variants={formItemVariants} className="flex space-x-2">
+          <div className="flex space-x-2">
             <Button type="submit" className="bg-teal-500 hover:bg-teal-600 transition-all" disabled={isLoading}>
               {isLoading ? (
                 <>
@@ -201,8 +172,8 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
                 Cancel
               </Button>
             )}
-          </motion.div>
-        </motion.form>
+          </div>
+        </form>
       </Form>
     </motion.div>
   )

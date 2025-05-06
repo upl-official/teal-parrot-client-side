@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, Suspense, useTransition } from "react"
+import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { usePathname } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
@@ -13,6 +13,7 @@ import { AccountHeader } from "@/components/account/account-header"
 import { cn } from "@/lib/utils"
 import { AuthGuard } from "@/lib/auth-utils"
 import { AccountNavigationProvider } from "@/lib/account-navigation-context"
+import { useState, useEffect, useTransition } from "react"
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
   const [isMounted, setIsMounted] = useState(false)

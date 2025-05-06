@@ -120,16 +120,16 @@ export default function AccountPage() {
   }
 
   return (
-    <AnimatedContainer animation="fade" key="dashboard-page">
+    <AnimatedContainer animation="fade" animationKey="dashboard-page">
+      {" "}
+      {/* Changed from 'key' to 'animationKey' */}
       {error && (
         <Alert variant="warning" className="mb-6 bg-amber-50 border-amber-200">
           <AlertCircle className="h-4 w-4 text-amber-500" />
           <AlertDescription className="text-amber-700">{error}</AlertDescription>
         </Alert>
       )}
-
       <h1 className="text-2xl font-bold mb-6">Account Dashboard</h1>
-
       <motion.div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         variants={containerVariants}

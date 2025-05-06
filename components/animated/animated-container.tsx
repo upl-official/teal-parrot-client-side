@@ -1,19 +1,19 @@
 "use client"
 
-import type React from "react"
-
+import type { ReactNode } from "react"
 import { motion } from "framer-motion"
 import { fadeIn } from "@/lib/animation-config"
 import { useInView } from "@/hooks/use-in-view"
 import { cn } from "@/lib/utils"
 
 interface AnimatedContainerProps {
-  children: React.ReactNode
+  children: ReactNode
   className?: string
   delay?: number
   duration?: number
   variants?: any
   animation?: "fade" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale"
+  animationKey?: string // Changed from 'key' to 'animationKey'
 }
 
 export function AnimatedContainer({
@@ -23,6 +23,7 @@ export function AnimatedContainer({
   duration = 0.3,
   variants = fadeIn,
   animation = "fade",
+  animationKey, // Changed from 'key' to 'animationKey'
 }: AnimatedContainerProps) {
   const { ref, isInView } = useInView({ threshold: 0.1 })
 
@@ -59,6 +60,7 @@ export function AnimatedContainer({
   return (
     <motion.div
       ref={ref}
+      key={animationKey} // Changed from 'key' to 'animationKey'
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
       variants={selectedVariants}

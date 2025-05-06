@@ -110,7 +110,9 @@ export function ProfileForm() {
   }
 
   return (
-    <AnimatedContainer className="space-y-6">
+    <AnimatedContainer className="space-y-6" animationKey="profile-form">
+      {" "}
+      {/* Changed from 'key' to 'animationKey' */}
       {/* Re-login Dialog */}
       <Dialog open={showReloginDialog} onOpenChange={setShowReloginDialog}>
         <DialogContent className="sm:max-w-md">
@@ -128,7 +130,6 @@ export function ProfileForm() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
       {error && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
@@ -141,7 +142,6 @@ export function ProfileForm() {
           </Alert>
         </motion.div>
       )}
-
       {success && !showReloginDialog && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
@@ -154,7 +154,6 @@ export function ProfileForm() {
           </Alert>
         </motion.div>
       )}
-
       <Form {...form}>
         <motion.form
           onSubmit={form.handleSubmit(onSubmit)}

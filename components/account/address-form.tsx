@@ -4,7 +4,6 @@ import { useState } from "react"
 import { z } from "zod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { motion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -13,7 +12,6 @@ import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { useAuthStore } from "@/lib/auth"
 import { addUserAddress } from "@/lib/api"
 import type { Address } from "@/lib/types"
-import { AnimatedContainer } from "@/components/animated/animated-container"
 
 const addressSchema = z.object({
   address: z.string().min(5, "Address must be at least 5 characters"),
@@ -72,78 +70,39 @@ export function AddressForm({ onAddressAdded }: AddressFormProps) {
     }
   }
 
-  const formVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  }
-
-  const formItemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.3 },
-    },
-  }
-
   return (
-    <AnimatedContainer className="space-y-6">
+    <div className="space-y-6">
       {error && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-        >
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        </motion.div>
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {success && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: "auto" }}
-          exit={{ opacity: 0, height: 0 }}
-        >
-          <Alert className="bg-green-50 border-green-200">
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-            <AlertDescription className="text-green-700">{success}</AlertDescription>
-          </Alert>
-        </motion.div>
+        <Alert className="bg-green-50 border-green-200">
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <AlertDescription className="text-green-700">{success}</AlertDescription>
+        </Alert>
       )}
 
       <Form {...form}>
-        <motion.form
-          onSubmit={form.handleSubmit(onSubmit)}
-          className="space-y-4"
-          variants={formVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <motion.div variants={formItemVariants}>
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Address</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Main St, Apt 4B" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="address"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address</FormLabel>
+                <FormControl>
+                  <Input placeholder="123 Main St, Apt 4B" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <motion.div variants={formItemVariants} className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
               name="city"
@@ -171,38 +130,34 @@ export function AddressForm({ onAddressAdded }: AddressFormProps) {
                 </FormItem>
               )}
             />
-          </motion.div>
+          </div>
 
-          <motion.div variants={formItemVariants}>
-            <FormField
-              control={form.control}
-              name="pincode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Pincode</FormLabel>
-                  <FormControl>
-                    <Input placeholder="10001" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </motion.div>
+          <FormField
+            control={form.control}
+            name="pincode"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Pincode</FormLabel>
+                <FormControl>
+                  <Input placeholder="10001" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <motion.div variants={formItemVariants}>
-            <Button type="submit" className="bg-teal-500 hover:bg-teal-600 transition-all" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Adding...
-                </>
-              ) : (
-                "Add Address"
-              )}
-            </Button>
-          </motion.div>
-        </motion.form>
+          <Button type="submit" className="bg-teal-500 hover:bg-teal-600 transition-all" disabled={isLoading}>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Adding...
+              </>
+            ) : (
+              "Add Address"
+            )}
+          </Button>
+        </form>
       </Form>
-    </AnimatedContainer>
+    </div>
   )
 }

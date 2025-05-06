@@ -1,10 +1,10 @@
 import { Suspense } from "react"
-import { AddressesContent } from "@/components/account/addresses-content"
+import { AddressesPage } from "@/components/account/addresses-page"
 
-export default function AddressesPage() {
+export default function AddressesRoute() {
   return (
-    <Suspense fallback={<div className="p-4">Loading addresses...</div>}>
-      <AddressesContent />
+    <Suspense fallback={<div className="p-6 text-center">Loading addresses...</div>}>
+      <AddressesPage />
     </Suspense>
   )
 }
