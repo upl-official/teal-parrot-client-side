@@ -15,3 +15,10 @@ export function redirectToLogin(currentPath: string): void {
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
+
+export const formatPrice = (amount: number) => {
+  return amount.toLocaleString("en-IN", {
+    style: "currency",
+    currency: "INR",
+  })
+}

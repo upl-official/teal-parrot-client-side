@@ -5,15 +5,18 @@ import React from "react"
 import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Search, ShoppingCart, User, Menu, X, ChevronUp, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuthStore } from "@/lib/auth"
-import { fetchCartItems, fetchWishlistItems } from "@/lib/api"
+import { fetchCartItems, fetchWishlistItems, searchProducts } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
 import { motion, AnimatePresence } from "framer-motion"
 import { cn } from "@/lib/utils"
+import { debounce } from "@/lib/debounce"
+import { SearchResults } from "./search/search-results"
+import type { Product } from "@/lib/types"
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -23,9 +26,13 @@ export function Header() {
   const [cartItemCount, setCartItemCount] = useState(0)
   const [wishlistItemCount, setWishlistItemCount] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<Product[]>([])
+  const [isSearching, setIsSearching] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchContainerRef = useRef<HTMLDivElement>(null)
   const { user, isAuthenticated, logout } = useAuthStore()
   const pathname = usePathname()
+  const router = useRouter()
 
   // Navigation items with their paths
   const navigationItems = [
@@ -43,6 +50,76 @@ export function Header() {
     }
     return pathname === path || pathname.startsWith(`${path}/`)
   }
+
+  // Debounced search function
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedSearch = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim()) {
+        setSearchResults([])
+        setIsSearching(false)
+        return
+      }
+
+      try {
+        setIsSearching(true)
+        const results = await searchProducts(query)
+        setSearchResults(results)
+      } catch (error) {
+        console.error("Search error:", error)
+        setSearchResults([])
+      } finally {
+        setIsSearching(false)
+      }
+    }, 300),
+    [],
+  )
+
+  // Handle search input change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value
+    setSearchQuery(query)
+    debouncedSearch(query)
+  }
+
+  // Handle search form submission
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (searchQuery.trim()) {
+      // Close the search dropdown
+      setIsSearchOpen(false)
+      setSearchResults([])
+
+      // Check if already on collection page
+      if (pathname === "/collection") {
+        // Use router.replace to update the URL without adding to history stack
+        router.replace(`/collection?search=${encodeURIComponent(searchQuery.trim())}`)
+
+        // Manually dispatch a custom event that the collection page can listen for
+        const searchEvent = new CustomEvent("search-query-updated", {
+          detail: { query: searchQuery.trim() },
+        })
+        window.dispatchEvent(searchEvent)
+      } else {
+        // Navigate to the collection page with the search query
+        router.push(`/collection?search=${encodeURIComponent(searchQuery.trim())}`)
+      }
+    }
+  }
+
+  // Close search results when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setSearchResults([])
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [])
 
   // Focus search input when search bar opens
   useEffect(() => {
@@ -153,27 +230,42 @@ export function Header() {
     window.location.href = "/"
   }
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (searchQuery.trim()) {
-      // Implement search functionality here
-      console.log("Searching for:", searchQuery)
-      // For now, we'll just close the search bar
-      setIsSearchOpen(false)
-      setSearchQuery("")
-    }
-  }
-
   const toggleSearch = () => {
     setIsSearchOpen(!isSearchOpen)
     if (!isSearchOpen) {
       setSearchQuery("")
+      setSearchResults([])
     }
   }
 
+  const handleSearchResultClick = () => {
+    setIsSearchOpen(false)
+    setSearchResults([])
+    setSearchQuery("")
+  }
+
+  // Handle click outside to close search results
+  const handleClickOutsideResults = useCallback((event: MouseEvent) => {
+    if (
+      searchContainerRef.current &&
+      !searchContainerRef.current.contains(event.target as Node) &&
+      !(event.target as Element).closest('button[aria-label="Search"]')
+    ) {
+      setSearchResults([])
+    }
+  }, [])
+
+  // Add event listener for click outside
+  useEffect(() => {
+    document.addEventListener("mousedown", handleClickOutsideResults)
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutsideResults)
+    }
+  }, [handleClickOutsideResults])
+
   return (
     <>
-      <header className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${scrolled ? "shadow-md" : ""}`}>
+      <header className={`fixed top-0 left-0 w-full z-[60] transition-all duration-300 ${scrolled ? "shadow-md" : ""}`}>
         <nav className="bg-teal-500 text-white">
           <div className="container mx-auto flex flex-wrap items-center justify-between px-4 pt-4">
             <div className="flex items-center">
@@ -404,60 +496,76 @@ export function Header() {
           <AnimatePresence>
             {isSearchOpen && (
               <motion.div
-                className="w-full bg-teal-500 overflow-hidden shadow-lg"
+                className="w-full bg-teal-500 shadow-lg"
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
                 transition={{ duration: 0.3, ease: "easeInOut" }}
               >
                 <div className="container mx-auto py-4 px-4">
-                  <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
-                    <div className="relative flex-grow">
-                      <Input
-                        ref={searchInputRef}
-                        type="search"
-                        placeholder="Search for products..."
-                        className="w-full rounded-md border-0 bg-white/90 backdrop-blur-sm text-gray-800 pl-4 pr-10 py-6 text-base focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-teal-600"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
-                      {searchQuery && (
-                        <button
-                          type="button"
-                          onClick={() => setSearchQuery("")}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                          aria-label="Clear search"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
-                      )}
-                    </div>
-                    <Button
-                      type="submit"
-                      className="bg-white text-teal-600 hover:bg-gray-100 hover:text-teal-700 font-medium py-6 px-6 rounded-md transition-all duration-200 shadow-sm"
-                    >
-                      Search
-                    </Button>
-                  </form>
+                  <div ref={searchContainerRef} className="relative">
+                    <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
+                      <div className="relative flex-grow">
+                        <Input
+                          ref={searchInputRef}
+                          type="search"
+                          placeholder="Search for products..."
+                          className="w-full rounded-md border-0 bg-white/90 backdrop-blur-sm text-gray-800 pl-4 pr-10 py-6 text-base focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-teal-600"
+                          value={searchQuery}
+                          onChange={handleSearchChange}
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery("")
+                              setSearchResults([])
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            aria-label="Clear search"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
+                      <Button
+                        type="submit"
+                        className="bg-white text-teal-600 hover:bg-gray-100 hover:text-teal-700 font-medium py-6 px-6 rounded-md transition-all duration-200 shadow-sm"
+                      >
+                        Search
+                      </Button>
 
-                  {/* Popular searches */}
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="text-white/80 text-sm">Popular:</span>
-                    <Link href="/collection?search=earrings" className="text-white text-sm hover:underline">
-                      Earrings
-                    </Link>
-                    <span className="text-white/50">•</span>
-                    <Link href="/collection?search=necklaces" className="text-white text-sm hover:underline">
-                      Necklaces
-                    </Link>
-                    <span className="text-white/50">•</span>
-                    <Link href="/collection?search=bracelets" className="text-white text-sm hover:underline">
-                      Bracelets
-                    </Link>
-                    <span className="text-white/50">•</span>
-                    <Link href="/collection?search=rings" className="text-white text-sm hover:underline">
-                      Rings
-                    </Link>
+                      {/* Search Results - Rendered outside the form to avoid overflow issues */}
+                    </form>
+
+                    {(searchResults.length > 0 || isSearching || (searchQuery && searchQuery.length > 2)) && (
+                      <SearchResults
+                        results={searchResults}
+                        isLoading={isSearching}
+                        searchQuery={searchQuery}
+                        onResultClick={handleSearchResultClick}
+                      />
+                    )}
+
+                    {/* Popular searches */}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="text-white/80 text-sm">Popular:</span>
+                      <Link href="/collection?search=earrings" className="text-white text-sm hover:underline">
+                        Earrings
+                      </Link>
+                      <span className="text-white/50">•</span>
+                      <Link href="/collection?search=necklaces" className="text-white text-sm hover:underline">
+                        Necklaces
+                      </Link>
+                      <span className="text-white/50">•</span>
+                      <Link href="/collection?search=bracelets" className="text-white text-sm hover:underline">
+                        Bracelets
+                      </Link>
+                      <span className="text-white/50">•</span>
+                      <Link href="/collection?search=rings" className="text-white text-sm hover:underline">
+                        Rings
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </motion.div>

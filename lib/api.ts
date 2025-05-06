@@ -88,6 +88,23 @@ export async function fetchProducts(categoryId?: string): Promise<Product[]> {
   return data.data.products.map(processProductData)
 }
 
+// Search products API
+export async function searchProducts(query: string): Promise<Product[]> {
+  if (!query || query.trim() === "") {
+    return []
+  }
+
+  const endpoint = `/product/list/?searchQuery=${encodeURIComponent(query.trim())}`
+
+  try {
+    const data = await apiRequest<{ success: boolean; data: { products: any[] } }>(endpoint)
+    return data.data.products.map(processProductData)
+  } catch (error) {
+    console.error("Error searching products:", error)
+    return []
+  }
+}
+
 export async function fetchFeaturedProducts(): Promise<Product[]> {
   // For featured products, we'll use the discounted products endpoint
   const data = await apiRequest<{ success: boolean; data: any[] }>("/pro/product-discount")

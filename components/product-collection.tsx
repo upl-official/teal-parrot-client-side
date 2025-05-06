@@ -749,9 +749,15 @@ export function ProductCollection() {
       try {
         setLoading(true)
 
-        // Get categoryId from URL if present
+        // Get parameters from URL if present
         const urlParams = new URLSearchParams(window.location.search)
         const urlCategoryId = urlParams.get("category")
+        const urlSearchQuery = urlParams.get("search")
+
+        // If there's a search query in the URL, set it in the state
+        if (urlSearchQuery) {
+          setSearchQuery(urlSearchQuery)
+        }
 
         // CHANGE: Always fetch all products first, regardless of URL parameter
         const [productsData, categoriesData, materialsData, gradesData] = await Promise.all([
@@ -763,25 +769,35 @@ export function ProductCollection() {
 
         setProducts(productsData)
 
-        // If category was specified in URL, update the filters state
+        // Apply initial filters based on URL parameters
+        let filteredByParams = [...productsData]
+
+        // If category was specified in URL, filter by category
         if (urlCategoryId) {
           setFilters((prev) => ({
             ...prev,
             categories: [urlCategoryId],
           }))
 
-          // Filter products client-side for the initial view
-          const filteredByCategory = productsData.filter((product) => {
+          // Filter products by category
+          filteredByParams = filteredByParams.filter((product) => {
             const categoryName = product.category
             const matchingCategory = categoriesData.find((c) => c.name === categoryName)
             return matchingCategory && matchingCategory._id === urlCategoryId
           })
-
-          setFilteredProducts(filteredByCategory)
-        } else {
-          setFilteredProducts(productsData)
         }
 
+        // If search query was specified in URL, filter by search query
+        if (urlSearchQuery) {
+          const query = urlSearchQuery.toLowerCase()
+          filteredByParams = filteredByParams.filter(
+            (product) =>
+              product.name.toLowerCase().includes(query) ||
+              (product.description && product.description.toLowerCase().includes(query)),
+          )
+        }
+
+        setFilteredProducts(filteredByParams)
         setCategories(categoriesData)
         setMaterials(materialsData)
         setGrades(gradesData)
@@ -828,6 +844,27 @@ export function ProductCollection() {
     }
 
     fetchUserItems()
+  }, [])
+
+  // Inside the component, add this new useEffect hook after the other useEffect hooks
+
+  // Listen for search events when already on the collection page
+  useEffect(() => {
+    const handleSearchUpdate = (event: any) => {
+      const query = event.detail.query
+      setSearchQuery(query)
+
+      // Update URL without page reload
+      const urlParams = new URLSearchParams(window.location.search)
+      urlParams.set("search", query)
+      const newUrl = `${window.location.pathname}?${urlParams.toString()}`
+      window.history.pushState({}, "", newUrl)
+    }
+
+    window.addEventListener("search-query-updated", handleSearchUpdate)
+    return () => {
+      window.removeEventListener("search-query-updated", handleSearchUpdate)
+    }
   }, [])
 
   // Apply filters and sorting with useCallback to prevent unnecessary re-renders
@@ -1035,6 +1072,13 @@ export function ProductCollection() {
   const removeFilter = useCallback((type: string, value?: string) => {
     if (type === "search") {
       setSearchQuery("")
+
+      // Update URL to remove search parameter
+      const urlParams = new URLSearchParams(window.location.search)
+      urlParams.delete("search")
+      const newUrl = `${window.location.pathname}${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
+      window.history.pushState({}, "", newUrl)
+
       return
     }
 
