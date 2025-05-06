@@ -62,10 +62,31 @@ export default function AccountPage() {
         }
 
         try {
-          const wishlistData = await fetchWishlistItems(user._id)
+          // Add a retry mechanism for wishlist
+          let retries = 2
+          let wishlistData: WishlistItem[] = []
+
+          while (retries > 0) {
+            try {
+              wishlistData = await fetchWishlistItems(user._id)
+              break // If successful, exit the retry loop
+            } catch (err) {
+              console.error(`Error fetching wishlist (retry ${3 - retries}/2):`, err)
+              retries--
+              if (retries === 0) {
+                console.warn("All wishlist fetch retries failed")
+              } else {
+                // Wait before retrying
+                await new Promise((resolve) => setTimeout(resolve, 1000))
+              }
+            }
+          }
+
           setWishlistItems(wishlistData)
         } catch (err) {
-          console.error("Error fetching wishlist items:", err)
+          console.error("Error in wishlist fetch process:", err)
+          // Set wishlist to empty array to prevent UI issues
+          setWishlistItems([])
         }
 
         try {

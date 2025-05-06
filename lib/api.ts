@@ -1,6 +1,8 @@
 import type { Product, CartItem, WishlistItem, Category, Material, Grade, Address, Order, User } from "./types"
 import { getAuthToken, useAuthStore } from "@/lib/auth"
 import { dispatchCartUpdateEvent } from "./cart-events"
+import { DEV_MODE, getFallbackWishlistItems } from "./dev-fallbacks"
+import { handleApiError } from "./api-error-handler"
 
 // Base URL for API
 const API_BASE_URL = "https://backend-project-r734.onrender.com/api/v1"
@@ -52,7 +54,10 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.message || `API request failed: ${response.statusText}`)
+      const error = new Error(errorData.message || `API request failed: ${response.statusText}`)
+      // @ts-ignore - Add status code to error object
+      error.statusCode = response.status
+      throw error
     }
 
     const responseData = await response.json()
@@ -62,12 +67,17 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
     // Check if the API returned success: false
     if (responseData.success === false) {
-      throw new Error(responseData.message || "API request failed")
+      const error = new Error(responseData.message || "API request failed")
+      // @ts-ignore - Add status code to error object
+      error.statusCode = response.status
+      throw error
     }
 
     return responseData
   } catch (error) {
-    console.error(`API Error (${endpoint}):`, error)
+    // Use our error handler to get a structured error
+    const apiError = handleApiError(error, `API Request: ${endpoint}`)
+    console.error(`API Error (${endpoint}):`, apiError)
     throw error
   }
 }
@@ -341,34 +351,66 @@ export async function fetchWishlistItems(userId: string): Promise<WishlistItem[]
     // Log the userId to ensure it's valid
     console.log("Fetching wishlist for userId:", userId)
 
+    // Check if userId is valid
+    if (!userId) {
+      console.warn("fetchWishlistItems called with invalid userId")
+      return DEV_MODE ? getFallbackWishlistItems() : []
+    }
+
     // Make the API request
-    const response = await apiRequest<{ success: boolean; data: any[] }>(`/users/wishlist/list?userId=${userId}`)
+    const response = await apiRequest<{ success: boolean; data: any }>(`/users/wishlist/list?userId=${userId}`)
 
     // Log the response to debug
     console.log("Wishlist API response:", response)
 
-    // Check if the response has the expected structure
-    if (!response.data || !Array.isArray(response.data)) {
-      console.error("Unexpected wishlist response format:", response)
-      return []
+    // Handle different response formats
+    if (!response.data) {
+      console.warn("Wishlist API returned no data property:", response)
+      return DEV_MODE ? getFallbackWishlistItems() : []
+    }
+
+    // If data is an empty object
+    if (typeof response.data === "object" && Object.keys(response.data).length === 0) {
+      console.info("Wishlist is empty for user:", userId)
+      return DEV_MODE ? getFallbackWishlistItems() : []
+    }
+
+    // If data is not an array, try to extract items from it
+    if (!Array.isArray(response.data)) {
+      console.warn("Wishlist data is not an array:", response.data)
+
+      // Check if data.items exists and is an array
+      if (response.data.items && Array.isArray(response.data.items)) {
+        console.info("Using items array from response.data")
+        return response.data.items.map(mapWishlistItem)
+      }
+
+      // If we can't find any valid data structure, return fallback or empty array
+      return DEV_MODE ? getFallbackWishlistItems() : []
     }
 
     // Map the API response to our WishlistItem structure
-    return response.data.map((item) => ({
-      product: {
-        _id: item.productId,
-        name: item.name,
-        price: item.price,
-        description: item.description || "",
-        category: item.category || "",
-        material: item.material || "",
-        grade: item.grade || "",
-        images: [PLACEHOLDER_IMAGE], // Use custom placeholder image
-      },
-    }))
+    return response.data.map(mapWishlistItem)
   } catch (error) {
     console.error("Error fetching wishlist items:", error)
-    return []
+    // Return fallback data in development or empty array in production
+    return DEV_MODE ? getFallbackWishlistItems() : []
+  }
+}
+
+// Helper function to map API response to WishlistItem
+function mapWishlistItem(item: any): WishlistItem {
+  return {
+    product: {
+      _id: item.productId || item._id || "unknown-id",
+      name: item.name || "Product Name Unavailable",
+      price: item.price || 0,
+      description: item.description || "",
+      category: item.category || "",
+      material: item.material || "",
+      grade: item.grade || "",
+      images: item.images?.map(ensureFullImageUrl) || [PLACEHOLDER_IMAGE],
+    },
   }
 }
 
