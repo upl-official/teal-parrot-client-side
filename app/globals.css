@@ -11,11 +11,57 @@
   --text-200: #939598;
   --bg-100: #ffffff;
   --bg-200: #dadada;
+  --scrollbar-thumb: #28acc1;
+  --scrollbar-thumb-hover: #1e8a9a;
+  --scrollbar-track: #f1f1f1;
+  --scrollbar-width: 8px;
+  --scrollbar-border-radius: 4px;
 }
 
 @layer base {
   body {
     @apply bg-white text-gray-900 font-antic-didone;
+  }
+
+  /* Custom Scrollbar Styling */
+  /* For Webkit browsers (Chrome, Safari, newer Edge) */
+  ::-webkit-scrollbar {
+    width: var(--scrollbar-width);
+    height: var(--scrollbar-width);
+  }
+
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+    border-radius: var(--scrollbar-border-radius);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: var(--scrollbar-border-radius);
+    transition: background-color 0.3s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  /* For Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  /* For Edge and IE */
+  @supports (-ms-overflow-style: none) {
+    html {
+      -ms-overflow-style: none;
+    }
+
+    .custom-scrollbar {
+      -ms-overflow-style: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    }
   }
 }
 
@@ -183,4 +229,54 @@
 
 .hide-scrollbar::-webkit-scrollbar {
   display: none; /* Chrome, Safari and Opera */
+}
+
+/* Custom scrollbar for specific containers */
+.custom-scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.custom-scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar-thin::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: var(--scrollbar-border-radius);
+}
+
+.custom-scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--scrollbar-border-radius);
+}
+
+.custom-scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Elegant scrollbar for product descriptions and long text */
+.elegant-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-100) var(--bg-200);
+}
+
+.elegant-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-200);
+  border-radius: 2px;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--accent-100);
+  border-radius: 2px;
+}
+
+.elegant-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-200);
 }

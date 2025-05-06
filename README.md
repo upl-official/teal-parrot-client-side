@@ -34,7 +34,7 @@ A modern e-commerce platform for silver jewelry, built with Next.js, TypeScript,
 
 1. Clone the repository:
    \`\`\`bash
-   git clone https://github.com/upl-official/teal-parrot-ecommerce.git
+   git clone https://github.com/your-username/teal-parrot-ecommerce.git
    cd teal-parrot-ecommerce
    \`\`\`
 
