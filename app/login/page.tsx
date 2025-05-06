@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Sign in to your Teal Parrot account to access your orders, wishlist, and more.",
 }
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
