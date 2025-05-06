@@ -1,30 +1,112 @@
-# Teal Parrot Client Side
+# Teal Parrot E-commerce
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+A modern e-commerce platform for silver jewelry, built with Next.js, TypeScript, and Tailwind CSS.
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/ultimumpilaeleague-gmailcoms-projects/v0-teal-parrot-client-side)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/xbdnbt4V96l)
+## Features
 
-## Overview
+- Responsive design for all device sizes
+- Product catalog with filtering and search
+- User authentication and account management
+- Shopping cart and wishlist functionality
+- Checkout process
+- Order history
+- Animated UI components with Framer Motion
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **UI Components**: Shadcn UI
+- **State Management**: Zustand
+- **Animations**: Framer Motion
+- **Icons**: Lucide React
+- **Fonts**: Google Fonts (Inter, Montserrat, Antic Didone)
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18.x or higher
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+   \`\`\`bash
+   git clone https://github.com/your-username/teal-parrot-ecommerce.git
+   cd teal-parrot-ecommerce
+   \`\`\`
+
+2. Install dependencies:
+   \`\`\`bash
+   npm install
+   # or
+   yarn install
+   \`\`\`
+
+3. Create a `.env.local` file in the root directory with the following variables:
+   \`\`\`
+   NEXT_PUBLIC_API_BASE_URL=https://backend-project-r734.onrender.com/api/v1
+   NEXT_PUBLIC_AUTH_ENABLED=true
+   NEXT_PUBLIC_ENABLE_WISHLIST=true
+   NEXT_PUBLIC_ENABLE_REVIEWS=true
+   \`\`\`
+
+4. Start the development server:
+   \`\`\`bash
+   npm run dev
+   # or
+   yarn dev
+   \`\`\`
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## Project Structure
+
+\`\`\`
+teal-parrot-ecommerce/
+├── app/                  # Next.js App Router pages
+├── components/           # React components
+│   ├── account/          # Account-related components
+│   ├── animated/         # Animation components
+│   ├── auth/             # Authentication components
+│   ├── checkout/         # Checkout components
+│   ├── contact/          # Contact form components
+│   ├── guide/            # Size and care guide components
+│   ├── landing/          # Landing page components
+│   └── ui/               # UI components (shadcn)
+├── hooks/                # Custom React hooks
+├── lib/                  # Utility functions and API
+├── public/               # Static assets
+│   ├── logos/            # Logo files
+│   └── ...               # Other images
+└── ...                   # Config files
+\`\`\`
+
+## API Integration
+
+The application integrates with a backend API for:
+- User authentication
+- Product catalog
+- Cart and wishlist management
+- Order processing
+
+The API base URL is configured in the `.env.local` file.
 
 ## Deployment
 
-Your project is live at:
+This project can be deployed on Vercel or any other Next.js-compatible hosting platform.
 
-**[https://vercel.com/ultimumpilaeleague-gmailcoms-projects/v0-teal-parrot-client-side](https://vercel.com/ultimumpilaeleague-gmailcoms-projects/v0-teal-parrot-client-side)**
+\`\`\`bash
+npm run build
+# or
+yarn build
+\`\`\`
 
-## Build your app
+## License
 
-Continue building your app on:
+[MIT](LICENSE)
+\`\`\`
 
-**[https://v0.dev/chat/projects/xbdnbt4V96l](https://v0.dev/chat/projects/xbdnbt4V96l)**
-
-## How It Works
-
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+Let's create a postcss.config.js file:

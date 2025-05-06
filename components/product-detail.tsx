@@ -1,0 +1,940 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
+import Link from "next/link"
+import {
+  Heart,
+  ShoppingCart,
+  Share2,
+  ChevronRight,
+  Truck,
+  Shield,
+  RotateCcw,
+  Star,
+  Plus,
+  Minus,
+  HeartIcon as HeartFilled,
+  ZoomIn,
+  Check,
+  X,
+} from "lucide-react"
+import { fetchProductById, addToCart, addToWishlist, getCurrentUserId, fetchWishlistItems } from "@/lib/api"
+import type { Product } from "@/lib/types"
+import { Button } from "@/components/ui/button"
+import { useToast } from "@/hooks/use-toast"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { motion, AnimatePresence } from "framer-motion"
+import { redirectToLogin } from "@/lib/utils"
+import { useMediaQuery } from "@/hooks/use-media-query"
+
+// Default placeholder image path
+const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
+
+// Add this function before the ProductDetail component to format the description
+function formatDescription(description: string): React.ReactNode[] {
+  if (!description) return [<p key="empty">No description available for this product.</p>]
+
+  // First replace \r\n with <br> for consistent processing
+  const normalizedDescription = description.replace(/\r\n/g, "<br>")
+
+  // Split by <br> tags to handle line breaks
+  const paragraphs = normalizedDescription.split("<br>")
+
+  const result: React.ReactNode[] = []
+  let inList = false
+  let listItems: React.ReactNode[] = []
+
+  paragraphs.forEach((paragraph, index) => {
+    // Skip empty paragraphs but render a line break
+    if (!paragraph.trim()) {
+      // If we're not in a list, add a line break
+      if (!inList) {
+        result.push(<br key={`br-${index}`} />)
+      }
+      return
+    }
+
+    // Check if this paragraph contains a heading tag
+    if (paragraph.includes("<h>") && paragraph.includes("</h>")) {
+      // If we were in a list, close it before adding the heading
+      if (inList && listItems.length > 0) {
+        result.push(
+          <ul key={`list-${index}`} className="ml-5 my-3 space-y-1">
+            {listItems}
+          </ul>,
+        )
+        listItems = []
+        inList = false
+      }
+
+      // Extract the heading text
+      const headingMatch = paragraph.match(/<h>(.*?)<\/h>/)
+      if (headingMatch) {
+        const headingText = headingMatch[1]
+        const parts = paragraph.split(/<h>.*?<\/h>/)
+
+        // Add text before heading if it exists
+        if (parts[0].trim()) {
+          result.push(
+            <p key={`pre-heading-${index}`} className="mb-2">
+              {formatInlineStyles(parts[0])}
+            </p>,
+          )
+        }
+
+        // Add the heading with proper spacing
+        result.push(
+          <h3 key={`heading-${index}`} className="text-lg font-semibold my-3">
+            {formatInlineStyles(headingText)}
+          </h3>,
+        )
+
+        // Add text after heading if it exists
+        if (parts[1] && parts[1].trim()) {
+          result.push(
+            <p key={`post-heading-${index}`} className="mb-2">
+              {formatInlineStyles(parts[1])}
+            </p>,
+          )
+        }
+      }
+      return
+    }
+
+    // Check if this is a list item
+    if (paragraph.trim().startsWith("=>")) {
+      const listItemText = paragraph.trim().substring(2).trim()
+      listItems.push(<li key={`list-item-${index}`}>{formatInlineStyles(listItemText)}</li>)
+      inList = true
+      return
+    } else if (inList) {
+      // If we were in a list but this paragraph is not a list item, close the list
+      result.push(
+        <ul key={`list-${index}`} className="ml-5 my-3 space-y-1">
+          {listItems}
+        </ul>,
+      )
+      listItems = []
+      inList = false
+    }
+
+    // Regular paragraph with inline formatting
+    result.push(
+      <p key={`p-${index}`} className="mb-2">
+        {formatInlineStyles(paragraph)}
+      </p>,
+    )
+  })
+
+  // If we ended with an open list, close it
+  if (inList && listItems.length > 0) {
+    result.push(
+      <ul key="final-list" className="ml-5 my-3 space-y-1">
+        {listItems}
+      </ul>,
+    )
+  }
+
+  return result
+}
+
+// Helper function to handle inline text formatting
+function formatInlineStyles(text: string): React.ReactNode[] {
+  let result: React.ReactNode[] = []
+  let currentText = text
+  let lastIndex = 0
+
+  // Handle bold text (*text*)
+  const boldRegex = /\*(.*?)\*/g
+  let boldMatch
+  while ((boldMatch = boldRegex.exec(currentText)) !== null) {
+    if (boldMatch.index > lastIndex) {
+      result.push(currentText.substring(lastIndex, boldMatch.index))
+    }
+    result.push(<strong key={`bold-${boldMatch.index}`}>{boldMatch[1]}</strong>)
+    lastIndex = boldMatch.index + boldMatch[0].length
+  }
+
+  // Add remaining text after processing bold
+  if (lastIndex < currentText.length) {
+    currentText = currentText.substring(lastIndex)
+    lastIndex = 0
+  } else {
+    return result
+  }
+
+  // Handle italic text (_text_)
+  const italicRegex = /_(.*?)_/g
+  let tempResult: React.ReactNode[] = []
+  let italicMatch
+
+  while ((italicMatch = italicRegex.exec(currentText)) !== null) {
+    if (italicMatch.index > lastIndex) {
+      tempResult.push(currentText.substring(lastIndex, italicMatch.index))
+    }
+    tempResult.push(<em key={`italic-${italicMatch.index}`}>{italicMatch[1]}</em>)
+    lastIndex = italicMatch.index + italicMatch[0].length
+  }
+
+  // Add remaining text after processing italic
+  if (lastIndex < currentText.length) {
+    tempResult.push(currentText.substring(lastIndex))
+  }
+
+  // If we processed any italic text, update result and currentText
+  if (tempResult.length > 0) {
+    result = [...result, ...tempResult]
+    return result
+  }
+
+  // Handle strikethrough text (~text~)
+  const strikeRegex = /~(.*?)~/g
+  let strikeMatch
+  tempResult = []
+  lastIndex = 0
+
+  while ((strikeMatch = strikeRegex.exec(currentText)) !== null) {
+    if (strikeMatch.index > lastIndex) {
+      tempResult.push(currentText.substring(lastIndex, strikeMatch.index))
+    }
+    tempResult.push(<del key={`strike-${strikeMatch.index}`}>{strikeMatch[1]}</del>)
+    lastIndex = strikeMatch.index + strikeMatch[0].length
+  }
+
+  // Add remaining text after processing strikethrough
+  if (lastIndex < currentText.length) {
+    tempResult.push(currentText.substring(lastIndex))
+  }
+
+  // If we processed any strikethrough text, update result
+  if (tempResult.length > 0) {
+    result = [...result, ...tempResult]
+    return result
+  }
+
+  // If no formatting was applied, return the original text
+  return [currentText]
+}
+
+export function ProductDetail({ productId }: { productId: string }) {
+  const [product, setProduct] = useState<Product | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [mainImage, setMainImage] = useState("")
+  const [error, setError] = useState("")
+  const [quantity, setQuantity] = useState(1)
+  const [isInWishlist, setIsInWishlist] = useState(false)
+  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({})
+
+  // Add or update these zoom-related states
+  const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 })
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [zoomLevel, setZoomLevel] = useState(2) // Zoom magnification level
+  const [showZoomModal, setShowZoomModal] = useState(false)
+  const imageRef = useRef<HTMLDivElement>(null)
+  const isMobile = useMediaQuery("(max-width: 768px)")
+
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [addedToCart, setAddedToCart] = useState(false)
+  const { toast } = useToast()
+  const router = useRouter()
+
+  // Fetch product details and check if it's in wishlist
+  useEffect(() => {
+    const getProduct = async () => {
+      try {
+        const data = await fetchProductById(productId)
+        setProduct(data)
+        if (data.images && data.images.length > 0) {
+          setMainImage(data.images[0])
+        }
+
+        // Check if product is in wishlist
+        const userId = getCurrentUserId()
+        if (userId) {
+          try {
+            const wishlistItems = await fetchWishlistItems(userId)
+            const isInList = wishlistItems.some((item) => item.product._id === productId)
+            setIsInWishlist(isInList)
+          } catch (error) {
+            console.error("Error checking wishlist status:", error)
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error)
+        setError("Failed to load product details. Please try again later.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    getProduct()
+  }, [productId])
+
+  // Reset added to cart state after 3 seconds
+  useEffect(() => {
+    if (addedToCart) {
+      const timer = setTimeout(() => {
+        setAddedToCart(false)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [addedToCart])
+
+  // Handle image zoom functionality
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!imageRef.current) return
+
+    const { left, top, width, height } = imageRef.current.getBoundingClientRect()
+
+    // Calculate cursor position as percentage of image dimensions
+    const x = Math.max(0, Math.min(100, ((e.clientX - left) / width) * 100))
+    const y = Math.max(0, Math.min(100, ((e.clientY - top) / height) * 100))
+
+    setZoomPosition({ x, y })
+  }
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!imageRef.current || e.touches.length !== 1) return
+
+    const touch = e.touches[0]
+    const { left, top, width, height } = imageRef.current.getBoundingClientRect()
+
+    // Calculate touch position as percentage of image dimensions
+    const x = Math.max(0, Math.min(100, ((touch.clientX - left) / width) * 100))
+    const y = Math.max(0, Math.min(100, ((touch.clientY - top) / height) * 100))
+
+    setZoomPosition({ x, y })
+  }
+
+  const handleTouchStart = () => {
+    setIsZoomed(true)
+  }
+
+  const handleTouchEnd = () => {
+    setIsZoomed(false)
+  }
+
+  const toggleZoomModal = () => {
+    setShowZoomModal(!showZoomModal)
+  }
+
+  const handleImageError = (imageUrl: string) => {
+    console.error(`Failed to load image: ${imageUrl}`)
+    setFailedImages((prev) => ({ ...prev, [imageUrl]: true }))
+
+    // If the main image failed to load, try to set another image as main
+    if (imageUrl === mainImage && product?.images) {
+      const nextValidImage = product.images.find((img) => !failedImages[img])
+      if (nextValidImage) {
+        setMainImage(nextValidImage)
+      } else {
+        // If all images failed, use the custom placeholder
+        setMainImage(PLACEHOLDER_IMAGE)
+      }
+    }
+  }
+
+  const getImageSrc = (imageUrl: string) => {
+    if (failedImages[imageUrl]) {
+      return PLACEHOLDER_IMAGE
+    }
+    return imageUrl
+  }
+
+  const handleAddToCart = async () => {
+    if (!product) return
+
+    try {
+      setIsAddingToCart(true)
+      const userId = getCurrentUserId()
+      if (!userId) {
+        toast({
+          title: "Please log in",
+          description: "You need to be logged in to add items to your cart",
+          variant: "destructive",
+        })
+        // Use the current full path for redirect after login
+        redirectToLogin(window.location.pathname)
+        return
+      }
+
+      console.log("Adding to cart:", { userId, productId: product._id, quantity })
+      await addToCart(userId, product._id, quantity)
+
+      // Show success state
+      setAddedToCart(true)
+
+      toast({
+        title: "Added to cart",
+        description: `${product.name} has been added to your cart.`,
+      })
+    } catch (error) {
+      console.error("Error adding to cart:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsAddingToCart(false)
+    }
+  }
+
+  const handleBuyNow = async () => {
+    if (!product) return
+
+    try {
+      setIsAddingToCart(true)
+      const userId = getCurrentUserId()
+      if (!userId) {
+        toast({
+          title: "Please log in",
+          description: "You need to be logged in to proceed to checkout",
+          variant: "destructive",
+        })
+        // Use the current full path for redirect after login
+        redirectToLogin(window.location.pathname)
+        return
+      }
+
+      await addToCart(userId, product._id, quantity)
+      setIsAddingToCart(false)
+      router.push("/cart")
+    } catch (error) {
+      setIsAddingToCart(false)
+      console.error("Error with buy now:", error)
+      toast({
+        title: "Error",
+        description: "Failed to process your request. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleAddToWishlist = async () => {
+    if (!product) return
+
+    try {
+      const userId = getCurrentUserId()
+      if (!userId) {
+        toast({
+          title: "Please log in",
+          description: "You need to be logged in to add items to your wishlist",
+          variant: "destructive",
+        })
+        // Use the current full path for redirect after login
+        redirectToLogin(window.location.pathname)
+        return
+      }
+
+      await addToWishlist(userId, product._id)
+      setIsInWishlist(true)
+      toast({
+        title: "Added to wishlist",
+        description: `${product.name} has been added to your wishlist.`,
+      })
+    } catch (error) {
+      console.error("Error adding to wishlist:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add item to wishlist. Please try again.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleShareProduct = () => {
+    if (navigator.share) {
+      navigator
+        .share({
+          title: product?.name || "Check out this product",
+          text: product?.description || "I found this amazing product",
+          url: window.location.href,
+        })
+        .catch((error) => console.error("Error sharing:", error))
+    } else {
+      // Fallback for browsers that don't support the Web Share API
+      navigator.clipboard.writeText(window.location.href)
+      toast({
+        title: "Link copied",
+        description: "Product link copied to clipboard",
+      })
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-16 flex justify-center items-center min-h-[60vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-16 flex justify-center items-center min-h-[60vh]">
+        <Alert variant="destructive" className="w-full max-w-md">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+          <Button onClick={() => window.location.reload()} className="mt-4 w-full">
+            Try Again
+          </Button>
+        </Alert>
+      </div>
+    )
+  }
+
+  if (!product) {
+    return (
+      <div className="container mx-auto px-4 py-16 flex justify-center items-center min-h-[60vh]">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Product Not Found</h2>
+          <p className="text-gray-600 mb-6">The product you're looking for doesn't exist or has been removed.</p>
+          <Button onClick={() => window.history.back()}>Go Back</Button>
+        </div>
+      </div>
+    )
+  }
+
+  // Calculate discount percentage if not provided
+  const discountPercentage =
+    product.discountPercentage ||
+    (product.originalPrice && product.price < product.originalPrice
+      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+      : 0)
+
+  return (
+    <div className="bg-white">
+      {/* Breadcrumb Navigation */}
+      <nav className="container mx-auto px-4 py-4 flex items-center text-sm text-gray-500">
+        <Link href="/" className="hover:text-teal-600">
+          Home
+        </Link>
+        <ChevronRight className="h-4 w-4 mx-1" />
+        <Link href="/collection" className="hover:text-teal-600">
+          Collection
+        </Link>
+        <ChevronRight className="h-4 w-4 mx-1" />
+        <span className="text-gray-900 font-medium truncate max-w-[200px]">{product.name}</span>
+      </nav>
+
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
+          {/* Product Images */}
+          <div className="space-y-6">
+            {/* Main Image with Zoom */}
+            <div className="aspect-square overflow-hidden rounded-lg relative border border-gray-200">
+              {/* Regular image view */}
+              <div
+                ref={imageRef}
+                className={`relative w-full h-full ${isMobile ? "cursor-pointer" : "cursor-zoom-in"}`}
+                onMouseMove={handleMouseMove}
+                onMouseEnter={() => !isMobile && setIsZoomed(true)}
+                onMouseLeave={() => !isMobile && setIsZoomed(false)}
+                onTouchMove={handleTouchMove}
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
+                onClick={isMobile ? toggleZoomModal : undefined}
+              >
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full h-full"
+                >
+                  <Image
+                    src={getImageSrc(mainImage) || product.images[0] || PLACEHOLDER_IMAGE}
+                    alt={product.name}
+                    width={600}
+                    height={600}
+                    className="object-cover w-full h-full"
+                    priority
+                    onError={() => handleImageError(mainImage)}
+                  />
+                </motion.div>
+
+                {/* Zoom lens overlay for desktop */}
+                {!isMobile && isZoomed && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute inset-0 pointer-events-none"
+                  >
+                    <div
+                      className="absolute inset-0 bg-no-repeat"
+                      style={{
+                        backgroundImage: `url(${getImageSrc(mainImage) || product.images[0] || PLACEHOLDER_IMAGE})`,
+                        backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
+                        backgroundSize: `${zoomLevel * 100}%`,
+                        backgroundRepeat: "no-repeat",
+                      }}
+                    ></div>
+                  </motion.div>
+                )}
+
+                {/* Zoom indicator */}
+                <motion.div
+                  className="absolute bottom-4 right-4 bg-white/80 p-2 rounded-full shadow-md"
+                  initial={{ scale: 0, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                >
+                  <ZoomIn className="h-5 w-5 text-gray-700" />
+                </motion.div>
+
+                {/* Instructions for mobile */}
+                {isMobile && (
+                  <motion.div
+                    className="absolute bottom-4 left-4 right-16 bg-black/60 text-white px-3 py-2 rounded-md text-xs"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5, duration: 0.3 }}
+                  >
+                    Tap to zoom
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Zoom Controls (Desktop only) */}
+              {!isMobile && (
+                <motion.div
+                  className="mt-3 flex items-center space-x-4 px-2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <span className="text-sm text-gray-500">Zoom level:</span>
+                  <input
+                    type="range"
+                    min="1.5"
+                    max="4"
+                    step="0.5"
+                    value={zoomLevel}
+                    onChange={(e) => setZoomLevel(Number.parseFloat(e.target.value))}
+                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                  />
+                  <span className="text-sm font-medium w-8">{zoomLevel}x</span>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Zoom Modal for Mobile */}
+            <AnimatePresence>
+              {showZoomModal && isMobile && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="fixed inset-0 bg-black/90 z-50 flex flex-col"
+                >
+                  <div className="flex justify-end p-4">
+                    <button onClick={toggleZoomModal} className="text-white p-2 rounded-full bg-gray-800/50">
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-auto touch-pan-y" onTouchMove={handleTouchMove}>
+                    <div className="w-full h-full min-h-[80vh] relative flex items-center justify-center">
+                      <Image
+                        src={getImageSrc(mainImage) || product.images[0] || PLACEHOLDER_IMAGE}
+                        alt={product.name}
+                        width={1200}
+                        height={1200}
+                        className="max-w-none object-contain max-h-full"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Thumbnail Gallery */}
+            <motion.div
+              className="grid grid-cols-4 gap-4"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              {product.images.map((image, index) => (
+                <motion.div
+                  key={index}
+                  className={`aspect-square overflow-hidden rounded-lg cursor-pointer transition-all duration-300 ${
+                    mainImage === image
+                      ? "border-2 ring-2 ring-teal-500 ring-opacity-50 transform scale-105"
+                      : "border border-gray-200 hover:border-teal-300 hover:shadow-md"
+                  }`}
+                  onClick={() => {
+                    setMainImage(image)
+                    setIsZoomed(false) // Reset zoom state when changing images
+                  }}
+                  whileHover={{ scale: mainImage === image ? 1.05 : 1.03 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Image
+                    src={getImageSrc(image) || PLACEHOLDER_IMAGE}
+                    alt={`${product.name} view ${index + 1}`}
+                    width={150}
+                    height={150}
+                    className={`object-cover w-full h-full transition-opacity duration-300 ${mainImage === image ? "opacity-100" : "opacity-80"}`}
+                    onError={() => handleImageError(image)}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+          </div>
+
+          {/* Product Details */}
+          <div className="space-y-6">
+            {/* Product Title and Badges */}
+            <div>
+              <motion.div
+                className="flex flex-wrap gap-2 mb-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                {product.stock && product.stock > 0 ? (
+                  <Badge className="bg-green-100 text-green-800 hover:bg-green-200">In Stock</Badge>
+                ) : (
+                  <Badge variant="destructive">Out of Stock</Badge>
+                )}
+                {discountPercentage > 0 && (
+                  <Badge className="bg-red-100 text-red-800 hover:bg-red-200">Sale {discountPercentage}% Off</Badge>
+                )}
+                {product.material && (
+                  <Badge variant="outline" className="border-gray-300">
+                    {product.material}
+                  </Badge>
+                )}
+              </motion.div>
+              <motion.h1
+                className="text-3xl font-bold text-gray-900"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                {product.name}
+              </motion.h1>
+
+              {/* Product Rating */}
+              <motion.div
+                className="flex items-center mt-2"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star key={star} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                  ))}
+                </div>
+                <span className="ml-2 text-sm text-gray-500">4.9 (120 reviews)</span>
+              </motion.div>
+            </div>
+
+            {/* Price Section */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="flex items-center space-x-4">
+                <span className="text-3xl font-bold text-gray-900">₹{product.price.toLocaleString("en-IN")}</span>
+                {product.originalPrice && product.originalPrice > product.price && (
+                  <span className="text-xl text-gray-500 line-through">
+                    ₹{product.originalPrice.toLocaleString("en-IN")}
+                  </span>
+                )}
+                {discountPercentage > 0 && (
+                  <span className="text-green-600 font-medium">
+                    Save ₹{(product.originalPrice! - product.price).toLocaleString("en-IN")}
+                  </span>
+                )}
+              </div>
+
+              {/* Tax and shipping info */}
+              <p className="text-sm text-gray-500 mt-2">Inclusive of all taxes</p>
+            </div>
+
+            {/* Quantity Selector and CTA Buttons */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-gray-700">Quantity:</span>
+                <div className="flex items-center border border-gray-300 rounded-md">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="px-3 py-1 border-r border-gray-300 hover:bg-gray-100"
+                    disabled={quantity <= 1}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="px-4 py-1 font-medium">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(Math.min(10, quantity + 1))}
+                    className="px-3 py-1 border-l border-gray-300 hover:bg-gray-100"
+                    disabled={product.stock !== undefined && quantity >= product.stock}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+                {product.stock !== undefined && (
+                  <span className="text-sm text-gray-500">
+                    {product.stock > 0 ? `${product.stock} available` : "Out of stock"}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Button
+                  onClick={handleAddToCart}
+                  className={`py-6 text-base flex items-center justify-center transition-all duration-300 ${
+                    addedToCart
+                      ? "bg-green-500 hover:bg-green-600 text-white"
+                      : "bg-teal-500 hover:bg-teal-600 text-white"
+                  }`}
+                  disabled={(product.stock !== undefined && product.stock <= 0) || isAddingToCart}
+                >
+                  {isAddingToCart ? (
+                    <>
+                      <span className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Adding...
+                    </>
+                  ) : addedToCart ? (
+                    <>
+                      <Check className="w-5 h-5 mr-2" />
+                      Added to Cart
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="w-5 h-5 mr-2" />
+                      Add to Cart
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={handleBuyNow}
+                  className="bg-orange-500 hover:bg-orange-600 text-white py-6 text-base"
+                  disabled={(product.stock !== undefined && product.stock <= 0) || isAddingToCart}
+                >
+                  {isAddingToCart ? (
+                    <>
+                      <span className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    "Buy Now"
+                  )}
+                </Button>
+              </div>
+
+              <div className="flex justify-between">
+                <Button
+                  onClick={handleAddToWishlist}
+                  variant="ghost"
+                  className={`text-gray-700 hover:bg-gray-100 ${isInWishlist ? "text-red-500" : ""}`}
+                >
+                  {isInWishlist ? (
+                    <HeartFilled className="w-5 h-5 mr-2 text-red-500 fill-red-500" />
+                  ) : (
+                    <Heart className="w-5 h-5 mr-2" />
+                  )}
+                  {isInWishlist ? "In Wishlist" : "Add to Wishlist"}
+                </Button>
+                <Button onClick={handleShareProduct} variant="ghost" className="text-gray-700 hover:bg-gray-100">
+                  <Share2 className="w-5 h-5 mr-2" />
+                  Share
+                </Button>
+              </div>
+            </div>
+
+            {/* Delivery and Returns */}
+            <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+              <div className="flex items-center">
+                <Truck className="h-5 w-5 text-teal-600 mr-2" />
+                <div>
+                  <p className="text-sm font-medium">Free Delivery</p>
+                  <p className="text-xs text-gray-500">Delivery within 3-5 business days</p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <Shield className="h-5 w-5 text-teal-600 mr-2" />
+                <div>
+                  <p className="text-sm font-medium">Secure Payments</p>
+                  <p className="text-xs text-gray-500">100% secure payment</p>
+                </div>
+              </div>
+              <div className="flex items-center">
+                <RotateCcw className="h-5 w-5 text-teal-600 mr-2" />
+                <div>
+                  <p className="text-sm font-medium">Easy Returns</p>
+                  <p className="text-xs text-gray-500">10 days return policy</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Product Information Tabs */}
+            <Tabs defaultValue="description" className="mt-8">
+              <TabsList className="grid grid-cols-2 mb-4">
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="specifications">Specifications</TabsTrigger>
+              </TabsList>
+              <TabsContent value="description" className="p-4 bg-white rounded-lg border border-gray-200">
+                <div className="prose max-w-none">
+                  <div className="text-gray-700 leading-relaxed">{formatDescription(product.description || "")}</div>
+                </div>
+              </TabsContent>
+              <TabsContent value="specifications" className="p-4 bg-white rounded-lg border border-gray-200">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    {product.material && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 font-medium w-1/3">Material</td>
+                        <td className="py-3 px-4">{product.material}</td>
+                      </tr>
+                    )}
+                    {product.grade && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 font-medium">Grade</td>
+                        <td className="py-3 px-4">{product.grade}</td>
+                      </tr>
+                    )}
+                    {product.coating && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 font-medium">Plating</td>
+                        <td className="py-3 px-4">{product.coating}</td>
+                      </tr>
+                    )}
+                    {product.gem && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 font-medium">Adorned element</td>
+                        <td className="py-3 px-4">{product.gem}</td>
+                      </tr>
+                    )}
+                    {product.size && (
+                      <tr className="border-b border-gray-200">
+                        <td className="py-3 px-4 font-medium">Available Sizes</td>
+                        <td className="py-3 px-4">{product.size}</td>
+                      </tr>
+                    )}
+                    {product.category && (
+                      <tr>
+                        <td className="py-3 px-4 font-medium">Category</td>
+                        <td className="py-3 px-4">{product.category}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
