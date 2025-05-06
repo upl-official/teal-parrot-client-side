@@ -36,6 +36,9 @@ export function ProductImage({
     setHasError(true)
   }
 
+  // Check if the image is from S3 and is properly configured
+  const isS3Image = imageSrc?.includes("teal-parrot.s3.eu-north-1.amazonaws.com")
+
   return (
     <div className={cn("relative overflow-hidden", className)}>
       {isLoading && !hasError && (
@@ -76,6 +79,13 @@ export function ProductImage({
           height: "100%",
         }}
       />
+
+      {/* Add a debug message during development */}
+      {process.env.NODE_ENV === "development" && isS3Image && hasError && (
+        <div className="absolute bottom-0 left-0 right-0 bg-red-500 text-white text-xs p-1 text-center">
+          S3 image failed to load. Check next.config.js
+        </div>
+      )}
     </div>
   )
 }

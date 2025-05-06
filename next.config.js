@@ -27,6 +27,11 @@ const nextConfig = {
         port: "8000",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "teal-parrot.s3.eu-north-1.amazonaws.com",
+        pathname: "/**",
+      },
     ],
   },
   experimental: {
