@@ -49,6 +49,4 @@ const nextConfig = {
   },
 }
 
-module.exports = {
-  distDir: 'build',
-}
+module.exports = nextConfig
