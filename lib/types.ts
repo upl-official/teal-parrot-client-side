@@ -63,6 +63,7 @@ export interface User {
 
 export interface Order {
   _id: string
+  orderId?: string // Added orderId as an optional property
   user: User
   product: Product
   quantity: number
@@ -71,4 +72,8 @@ export interface Order {
   createdAt: string
   updatedAt?: string
   totalAmount?: number
+  totalPrice?: number // Added to match OrderResponse
+  shippingAddress?: Address // Added to match OrderResponse
+  placedAt?: string // Added to match OrderResponse
+  items?: Array<{ product: Product; quantity: number }> // Added to match OrderResponse
 }
