@@ -34,9 +34,12 @@ const nextConfig = {
       },
     ],
     unoptimized: process.env.NODE_ENV === "development",
+    domains: ["placeholder.pics", "via.placeholder.com", "placehold.co"],
   },
   experimental: {
     // Keep optimizeCss but ensure we have the dependency
+    disableOptimizedLoading: true,
+    disableServerComponents: false,
   },
   typescript: {
     // Dangerously allow production builds to successfully complete even if
@@ -49,7 +52,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   // Ensure output is compatible with Vercel deployment
-  output: "standalone",
+  output: "export",
 }
 
 module.exports = nextConfig
