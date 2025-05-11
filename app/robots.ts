@@ -1,3 +1,5 @@
+export const dynamic = "force-static"
+
 import type { MetadataRoute } from "next"
 
 export default function robots(): MetadataRoute.Robots {
@@ -7,7 +9,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/api/", "/account/"],
+      disallow: ["/api/", "/admin/", "/_next/"],
     },
     sitemap: `${baseUrl}/sitemap.xml`,
   }

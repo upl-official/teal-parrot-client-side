@@ -1,3 +1,5 @@
+export const dynamic = "force-static"
+
 import { fetchCategories, fetchProducts } from "@/lib/api"
 
 // Base URL for the site

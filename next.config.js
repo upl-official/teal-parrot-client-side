@@ -33,13 +33,8 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
-    unoptimized: process.env.NODE_ENV === "development",
+    unoptimized: true,
     domains: ["placeholder.pics", "via.placeholder.com", "placehold.co"],
-  },
-  experimental: {
-    // Keep optimizeCss but ensure we have the dependency
-    disableOptimizedLoading: true,
-    disableServerComponents: false,
   },
   typescript: {
     // Dangerously allow production builds to successfully complete even if
