@@ -46,7 +46,7 @@ export default function SecurityPage() {
   }
 
   return (
-    <AnimatedContainer animation="fade" key="security-page">
+    <AnimatedContainer animation="fade" animationKey="security-page">
       <h1 className="text-2xl font-bold mb-6">Security Settings</h1>
 
       <Alert className="mb-6 bg-blue-50 border-blue-200">
@@ -67,7 +67,12 @@ export default function SecurityPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                layout
+              >
                 <FormField
                   control={form.control}
                   name="currentPassword"
@@ -96,7 +101,12 @@ export default function SecurityPage() {
                 />
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                layout
+              >
                 <FormField
                   control={form.control}
                   name="newPassword"
@@ -125,7 +135,12 @@ export default function SecurityPage() {
                 />
               </motion.div>
 
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                layout
+              >
                 <FormField
                   control={form.control}
                   name="confirmPassword"

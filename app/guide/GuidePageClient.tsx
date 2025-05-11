@@ -13,7 +13,6 @@ export default function GuidePageClient() {
   return (
     <PageTransition>
       <main className="flex min-h-screen flex-col">
-        <Header />
         <div className="flex-grow">
           {/* Hero Section */}
           <section className="relative bg-gradient-to-r from-teal-600 to-teal-500 py-16 text-white">

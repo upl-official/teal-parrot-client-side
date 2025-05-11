@@ -546,26 +546,6 @@ export function Header() {
                         onResultClick={handleSearchResultClick}
                       />
                     )}
-
-                    {/* Popular searches */}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <span className="text-white/80 text-sm">Popular:</span>
-                      <Link href="/collection?search=earrings" className="text-white text-sm hover:underline">
-                        Earrings
-                      </Link>
-                      <span className="text-white/50">•</span>
-                      <Link href="/collection?search=necklaces" className="text-white text-sm hover:underline">
-                        Necklaces
-                      </Link>
-                      <span className="text-white/50">•</span>
-                      <Link href="/collection?search=bracelets" className="text-white text-sm hover:underline">
-                        Bracelets
-                      </Link>
-                      <span className="text-white/50">•</span>
-                      <Link href="/collection?search=rings" className="text-white text-sm hover:underline">
-                        Rings
-                      </Link>
-                    </div>
                   </div>
                 </div>
               </motion.div>

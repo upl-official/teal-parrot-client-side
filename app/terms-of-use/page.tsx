@@ -323,13 +323,11 @@ export default function TermsOfUsePage() {
               <p className="mb-2">Email: legal@tealparrot.com</p>
               <p className="mb-2">Phone: +91 99999 99999</p>
               <p>
-                Address: 123 Silver Street
+                Address: Acotoman India Pvt. Ltd.
                 <br />
-                Jewelry District
+                Sasthamangalam, Thiruvananthapuram
                 <br />
-                New Delhi, 110001
-                <br />
-                India
+                Kerala, IND, 695010
               </p>
             </div>
           </section>

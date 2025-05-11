@@ -1,18 +1,17 @@
-import { Header } from "@/components/header"
-import { Footer } from "@/components/footer"
+import { PageLayout } from "@/components/page-layout"
 import { ProductCollection } from "@/components/product-collection"
-import { PageTransition } from "@/components/animated/page-transition"
 
-export default function CollectionPage() {
+// Define the correct type for Next.js App Router page props
+type CollectionPageProps = {
+  params: { [key: string]: string | string[] }
+  searchParams: { [key: string]: string | string[] | undefined }
+}
+
+export default function CollectionPage({ searchParams }: CollectionPageProps) {
+  // Pass searchParams to ProductCollection
   return (
-    <PageTransition>
-      <main className="flex min-h-screen flex-col">
-        <Header />
-        <div className="flex-grow">
-          <ProductCollection />
-        </div>
-        <Footer />
-      </main>
-    </PageTransition>
+    <PageLayout>
+      <ProductCollection />
+    </PageLayout>
   )
 }
