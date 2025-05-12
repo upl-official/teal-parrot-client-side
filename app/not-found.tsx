@@ -1,4 +1,4 @@
-export default function NotFoundCatchAll() {
+export default function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] px-4 py-16 text-center">
       <div className="max-w-md mx-auto">
@@ -21,10 +21,6 @@ export default function NotFoundCatchAll() {
       </div>
     </div>
   )
-}
-
-export function generateStaticParams() {
-  return [{ "not-found": ["404"] }]
 }
 
 export function generateMetadata() {
