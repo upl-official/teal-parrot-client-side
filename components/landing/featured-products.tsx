@@ -221,7 +221,10 @@ export function FeaturedProducts() {
                     onMouseLeave={() => setHoveredProduct(null)}
                   >
                     <div className="relative overflow-hidden rounded-lg bg-white shadow-md transition-all duration-300 hover:shadow-xl min-w-[300px] sm:min-w-[340px]">
-                      <div className="relative cursor-pointer" onClick={() => navigateToProduct(selectedProduct._id)}>
+                      <div
+                        className="relative cursor-pointer overflow-hidden"
+                        onClick={() => navigateToProduct(selectedProduct._id)}
+                      >
                         <div className="relative h-80 overflow-hidden">
                           <Image
                             src={selectedProduct.images[0] || "/images/tp-placeholder-img.jpg"}
@@ -240,7 +243,7 @@ export function FeaturedProducts() {
                           <AnimatePresence>
                             {hoveredProduct === groupKey && (
                               <motion.div
-                                className="absolute bottom-0 left-0 right-0 bg-black/70 p-4 transition-all duration-300"
+                                className="absolute bottom-0 left-0 right-0 bg-black/70 p-3"
                                 onClick={(e) => e.stopPropagation()} // Prevent navigating when clicking the size selector area
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -290,7 +293,7 @@ export function FeaturedProducts() {
                           {selectedProduct.name}
                         </h3>
 
-                        {selectedSize && (
+                        {selectedSize === "Adjustable" && (
                           <div className="mt-1 mb-2">
                             <p className="text-sm text-gray-500">
                               Size: <span className="font-medium">{selectedSize}</span>

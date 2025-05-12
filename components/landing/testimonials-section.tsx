@@ -73,7 +73,7 @@ export function TestimonialsSection() {
         </motion.div>
 
         <div className="relative max-w-4xl mx-auto">
-          <div className="overflow-hidden">
+          <div className="py-6 overflow-hidden">
             <div
               className="flex transition-transform duration-500 ease-in-out"
               style={{ transform: `translateX(-${activeIndex * 100}%)` }}
