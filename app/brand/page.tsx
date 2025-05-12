@@ -286,7 +286,7 @@ export default function BrandPage() {
             <AnimatedContainer animation="scale" delay={0.3} className="col-span-2">
               <div className="relative h-80 overflow-hidden rounded-lg shadow-lg group">
                 <Image
-                  src="/silver-display.png"
+                  src="https://teal-parrot.s3.eu-north-1.amazonaws.com/products/0233b2af-a166-450e-9989-0e355ea8c451.jpg"
                   alt="Silver Necklace"
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-110"

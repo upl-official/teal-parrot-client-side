@@ -8,6 +8,7 @@ type CollectionPageProps = {
 }
 
 export default function CollectionPage({ searchParams }: CollectionPageProps) {
+  // Pass searchParams to ProductCollection
   return (
     <PageLayout>
       <ProductCollection />
