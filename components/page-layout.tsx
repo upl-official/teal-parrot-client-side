@@ -13,7 +13,11 @@ export function PageLayout({ children }: { children: React.ReactNode }) {
         <Header />
       </Suspense>
       <PageTransition>
-        <main className="flex-grow">{children}</main>
+        <main className="flex-grow">
+          <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]">Loading...</div>}>
+            {children}
+          </Suspense>
+        </main>
       </PageTransition>
       <Footer />
     </div>

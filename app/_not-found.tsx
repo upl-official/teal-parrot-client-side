@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Suspense } from "react"
 
-export default function NotFound() {
+export default function GlobalNotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
       <h1 className="text-6xl font-bold text-teal-600 mb-4">404</h1>
