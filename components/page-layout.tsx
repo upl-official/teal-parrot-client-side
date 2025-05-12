@@ -1,49 +1,20 @@
 "use client"
 
 import type React from "react"
+import { Suspense } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { motion, AnimatePresence } from "framer-motion"
-import { usePathname } from "next/navigation"
-import { useTransition } from "@/lib/transition-context"
+import { PageTransition } from "@/components/animated/page-transition"
 
-interface PageLayoutProps {
-  children: React.ReactNode
-}
-
-export function PageLayout({ children }: PageLayoutProps) {
-  const pathname = usePathname()
-  const { isFirstMount } = useTransition()
-
-  // Page transition variants
-  const variants = {
-    hidden: { opacity: 0, y: 20 },
-    enter: { opacity: 1, y: 0 },
-    exit: { opacity: 0, y: -20 },
-  }
-
+export function PageLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <AnimatePresence mode="wait">
-        <motion.main
-          key={pathname}
-          initial="hidden"
-          animate="enter"
-          exit="exit"
-          variants={variants}
-          transition={{
-            type: "tween",
-            ease: "easeInOut",
-            duration: 0.4,
-            // Skip exit animation on first mount to prevent double animation
-            when: isFirstMount ? "afterChildren" : "beforeChildren",
-          }}
-          className="flex-grow"
-        >
-          {children}
-        </motion.main>
-      </AnimatePresence>
+    <div className="flex flex-col min-h-screen">
+      <Suspense fallback={<div className="h-[64px] bg-white border-b"></div>}>
+        <Header />
+      </Suspense>
+      <PageTransition>
+        <main className="flex-grow">{children}</main>
+      </PageTransition>
       <Footer />
     </div>
   )
