@@ -2,18 +2,11 @@
 const nextConfig = {
   reactStrictMode: true,
   images: {
+    domains: ["images.unsplash.com", "plus.unsplash.com"],
     remotePatterns: [
       {
         protocol: "https",
         hostname: "v0.blob.com",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-      {
-        protocol: "https",
-        hostname: "plus.unsplash.com",
       },
       {
         protocol: "https",
@@ -48,7 +41,7 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Ensure output is compatible with Vercel deployment
+  // Disable static 404 generation to use custom 404 pages
   output: "standalone",
 }
 

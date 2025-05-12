@@ -1,9 +1,3 @@
-"use client"
-
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Suspense } from "react"
-
 export default function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
@@ -12,11 +6,9 @@ export default function NotFound() {
       <p className="text-gray-600 mb-8 max-w-md">
         We couldn't find the page you were looking for. It might have been moved or doesn't exist.
       </p>
-      <Suspense fallback={<div className="px-4 py-2 bg-teal-600 text-white rounded">Loading...</div>}>
-        <Button asChild>
-          <Link href="/">Return to Home</Link>
-        </Button>
-      </Suspense>
+      <a href="/" className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors">
+        Return to Home
+      </a>
     </div>
   )
 }
