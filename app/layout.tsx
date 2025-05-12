@@ -4,7 +4,6 @@ import { Inter, Montserrat, Antic_Didone } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TransitionProvider } from "@/lib/transition-context"
-import { ScrollProvider } from "@/lib/scroll-context"
 import { ScrollToTop } from "@/components/scroll-to-top"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
@@ -30,12 +29,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${montserrat.variable} ${anticDidone.variable}`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <ScrollProvider>
-            <TransitionProvider>
-              {children}
-              <ScrollToTop />
-            </TransitionProvider>
-          </ScrollProvider>
+          <TransitionProvider>
+            {children}
+            <ScrollToTop />
+          </TransitionProvider>
         </ThemeProvider>
       </body>
     </html>

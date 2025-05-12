@@ -4,8 +4,7 @@ import type React from "react"
 
 import { motion } from "framer-motion"
 import { usePathname } from "next/navigation"
-import { useEffect } from "react"
-import { useTransition } from "@/lib/transition-context"
+import { useEffect, useState } from "react"
 
 interface PageTransitionProps {
   children: React.ReactNode
@@ -13,21 +12,14 @@ interface PageTransitionProps {
 
 export function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname()
-  const { isFirstMount } = useTransition()
+  const [isFirstRender, setIsFirstRender] = useState(true)
 
-  // Reset scroll position at the beginning of the transition
   useEffect(() => {
-    if (!isFirstMount && typeof window !== "undefined") {
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: "instant", // Use instant to avoid any animation delay
-      })
-    }
-  }, [pathname, isFirstMount])
+    setIsFirstRender(false)
+  }, [])
 
   // Skip animation on first render to prevent hydration issues
-  if (isFirstMount) {
+  if (isFirstRender) {
     return <>{children}</>
   }
 
@@ -38,16 +30,6 @@ export function PageTransition({ children }: PageTransitionProps) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      onExitComplete={() => {
-        // Ensure scroll is reset after exit animation completes
-        if (typeof window !== "undefined") {
-          window.scrollTo({
-            top: 0,
-            left: 0,
-            behavior: "instant",
-          })
-        }
-      }}
     >
       {children}
     </motion.div>

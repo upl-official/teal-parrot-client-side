@@ -36,15 +36,6 @@ export function AccountNavigationProvider({ children }: { children: React.ReactN
   // Reset navigation state after pathname changes
   useEffect(() => {
     if (previousPath.current && previousPath.current !== pathname) {
-      // Reset scroll position immediately when changing account sections
-      if (typeof window !== "undefined") {
-        window.scrollTo({
-          top: 0,
-          left: 0,
-          behavior: "instant",
-        })
-      }
-
       // Small delay to ensure content is loaded
       navigationTimer.current = setTimeout(() => {
         setIsNavigating(false)
@@ -63,15 +54,6 @@ export function AccountNavigationProvider({ children }: { children: React.ReactN
     (path: string) => {
       if (pathname !== path) {
         setIsNavigating(true)
-
-        // Reset scroll position immediately before navigation
-        if (typeof window !== "undefined") {
-          window.scrollTo({
-            top: 0,
-            left: 0,
-            behavior: "instant",
-          })
-        }
 
         // Small delay before navigation to ensure UI state updates
         setTimeout(() => {
