@@ -1,24 +1,47 @@
 "use client"
 
 import type React from "react"
-import { Suspense } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import { PageTransition } from "@/components/animated/page-transition"
+import { motion } from "framer-motion"
+import { usePathname } from "next/navigation"
+import { useTransition } from "@/lib/transition-context"
 
-export function PageLayout({ children }: { children: React.ReactNode }) {
+interface PageLayoutProps {
+  children: React.ReactNode
+}
+
+export function PageLayout({ children }: PageLayoutProps) {
+  const pathname = usePathname()
+  const { isFirstMount } = useTransition()
+
+  // Page transition variants
+  const variants = {
+    hidden: { opacity: 0, y: 20 },
+    enter: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 },
+  }
+
   return (
-    <div className="flex flex-col min-h-screen">
-      <Suspense fallback={<div className="h-[64px] bg-white border-b"></div>}>
-        <Header />
-      </Suspense>
-      <PageTransition>
-        <main className="flex-grow">
-          <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]">Loading...</div>}>
-            {children}
-          </Suspense>
-        </main>
-      </PageTransition>
+    <div className="flex min-h-screen flex-col">
+      <Header />
+      <motion.main
+        key={pathname}
+        initial="hidden"
+        animate="enter"
+        exit="exit"
+        variants={variants}
+        transition={{
+          type: "tween",
+          ease: "easeInOut",
+          duration: 0.4,
+          // Skip exit animation on first mount to prevent double animation
+          when: isFirstMount ? "afterChildren" : "beforeChildren",
+        }}
+        className="flex-grow"
+      >
+        {children}
+      </motion.main>
       <Footer />
     </div>
   )

@@ -1,59 +1,39 @@
 "use client"
 
-import type React from "react"
-
 import { motion } from "framer-motion"
 import { usePathname } from "next/navigation"
-import { useEffect } from "react"
 import { useTransition } from "@/lib/transition-context"
+import type { ReactNode } from "react"
 
 interface PageTransitionProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname()
   const { isFirstMount } = useTransition()
 
-  // Reset scroll position at the beginning of the transition
-  useEffect(() => {
-    if (!isFirstMount && typeof window !== "undefined") {
-      window.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: "instant", // Use instant to avoid any animation delay
-      })
-    }
-  }, [pathname, isFirstMount])
-
-  // Add effect to reset scroll after animation completes
-  useEffect(() => {
-    // This will run after the animation completes
-    const timer = setTimeout(() => {
-      if (typeof window !== "undefined") {
-        window.scrollTo({
-          top: 0,
-          left: 0,
-          behavior: "instant",
-        })
-      }
-    }, 300) // Match with animation duration
-
-    return () => clearTimeout(timer)
-  }, [pathname])
-
-  // Skip animation on first render to prevent hydration issues
-  if (isFirstMount) {
-    return <>{children}</>
+  // Page transition variants
+  const variants = {
+    hidden: { opacity: 0, y: 20 },
+    enter: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 },
   }
 
   return (
     <motion.div
       key={pathname}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.3 }}
+      initial="hidden"
+      animate="enter"
+      exit="exit"
+      variants={variants}
+      transition={{
+        type: "tween",
+        ease: "easeInOut",
+        duration: 0.4,
+        // Skip exit animation on first mount to prevent double animation
+        when: isFirstMount ? "afterChildren" : "beforeChildren",
+      }}
     >
       {children}
     </motion.div>
