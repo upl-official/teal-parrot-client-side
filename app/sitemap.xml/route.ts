@@ -34,12 +34,12 @@ export async function GET(): Promise<Response> {
   // Add static routes
   staticRoutes.forEach((route) => {
     xml += "  <url>\n"
-    xml += `    <loc>${baseUrl}${route}</loc>\n'
-    xml += '    <changefreq>weekly</changefreq>\n'
-    xml += '    <priority>0.8</priority>\n'
-    xml += '  </url>\n'
+    xml += `    <loc>${baseUrl}${route}</loc>\n`
+    xml += "    <changefreq>weekly</changefreq>\n"
+    xml += "    <priority>0.8</priority>\n"
+    xml += "  </url>\n"
   })
-  
+
   // Add product routes (using mock data for static export)
   const productIds = [
     "silver-nose-ring-1",
@@ -51,31 +51,23 @@ export async function GET(): Promise<Response> {
     "silver-pendant-1",
     "silver-chain-1",
     "silver-bangle-1",
-    "silver-charm-1"
+    "silver-charm-1",
   ]
-  
-  productIds.forEach(id => {
-    xml += '  <url>\n'
-    xml += \`    <loc>${baseUrl}/product/${id}</loc>\n'
-    xml += '    <changefreq>weekly</changefreq>\n'
-    xml += '    <priority>0.7</priority>\n'
-    xml += '  </url>\n'
+
+  productIds.forEach((productId) => {
+    xml += "  <url>\n"
+    xml += `    <loc>${baseUrl}/product/${productId}</loc>\n`
+    xml += "    <changefreq>weekly</changefreq>\n"
+    xml += "    <priority>0.7</priority>\n"
+    xml += "  </url>\n"
   })
-  
+
   // Add category routes
-  const categories = [
-    "nose-rings",
-    "earrings",
-    "bracelets",
-    "necklaces",
-    "anklets",
-    "rings",
-    "pendants"
-  ]
-  
-  categories.forEach(category => {
-    xml += '  <url>\n'
-    xml += \`    <loc>${baseUrl}/collection/${category}</loc>\n`
+  const categories = ["nose-rings", "earrings", "bracelets", "necklaces", "anklets", "rings", "pendants"]
+
+  categories.forEach((category) => {
+    xml += "  <url>\n"
+    xml += `    <loc>${baseUrl}/collection/${category}</loc>\n`
     xml += "    <changefreq>weekly</changefreq>\n"
     xml += "    <priority>0.7</priority>\n"
     xml += "  </url>\n"
