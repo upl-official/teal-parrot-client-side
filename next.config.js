@@ -46,8 +46,8 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Remove static export to allow server-side rendering
-  // output: "export",
+  // Ensure output is compatible with Vercel deployment
+  output: "export",
 }
 
 module.exports = nextConfig
