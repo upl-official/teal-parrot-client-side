@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>404 - Page Not Found | Teal Parrot</title>
+  <title>503 - Service Unavailable | Teal Parrot</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -28,7 +28,7 @@
     h1 {
       font-size: 4rem;
       font-weight: 700;
-      color: #2563eb;
+      color: #0d9488;
       margin-bottom: 1rem;
     }
     h2 {
@@ -74,19 +74,31 @@
     .secondary-button:hover {
       background-color: #f3f4f6;
     }
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    .spinner {
+      display: inline-block;
+      animation: spin 2s linear infinite;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="content">
-      <h1>404</h1>
-      <h2>Page Not Found</h2>
+      <h1><span class="spinner">⚙️</span></h1>
+      <h2>Service Unavailable</h2>
       <p>
-        We couldn't find the page you're looking for. The page may have been moved, deleted, or never existed.
+        Our service is temporarily unavailable due to maintenance or capacity issues. Please try again later.
       </p>
       <div class="button-container">
-        <a href="/" class="primary-button">Return to Home</a>
-        <a href="/collection" class="secondary-button">Browse Collection</a>
+        <a href="javascript:window.location.reload()" class="primary-button">Try Again</a>
+        <a href="mailto:support@tealparrot.com" class="secondary-button">Contact Support</a>
       </div>
     </div>
   </div>
