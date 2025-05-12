@@ -1,4 +1,4 @@
-export default function NotFound() {
+export default function CatchAllNotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[70vh] px-4 text-center">
       <h1 className="text-6xl font-bold text-teal-600 mb-4">404</h1>
@@ -11,4 +11,8 @@ export default function NotFound() {
       </a>
     </div>
   )
+}
+
+export function generateStaticParams() {
+  return [{ "not-found": ["404"] }]
 }
