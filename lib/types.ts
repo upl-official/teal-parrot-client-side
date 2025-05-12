@@ -18,7 +18,6 @@ export interface Product {
   coating?: string
   gem?: string
   size?: string
-  sizes?: ProductSize[]
   variants?: ProductVariant[]
   specifications?: Record<string, string>
   createdAt?: string
@@ -31,22 +30,6 @@ export interface ProductVariant {
   price?: number
   stock?: number
   images?: string[]
-}
-
-// Add this new interface for product sizes
-export interface ProductSize {
-  _id: string
-  size: string
-  price?: number
-  stock?: number
-  images?: string[]
-}
-
-// Add this interface for grouped products
-export interface GroupedProduct extends Product {
-  variants: Product[]
-  selectedVariant: Product
-  availableSizes: string[]
 }
 
 export interface Category {
