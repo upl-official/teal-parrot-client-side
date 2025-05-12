@@ -28,25 +28,3 @@ export default function ProductPage({ params }: { params: { id: string } }) {
     </main>
   )
 }
-
-// This function is required for static export with dynamic routes
-export function generateStaticParams() {
-  // Return an array of objects with the id parameter
-  return [
-    { id: "silver-nose-ring" },
-    { id: "silver-earrings" },
-    { id: "silver-bracelet" },
-    { id: "silver-necklace" },
-    { id: "silver-anklet" },
-    { id: "silver-pendant" },
-    { id: "silver-ring" },
-    { id: "silver-bangle" },
-    { id: "silver-chain" },
-    { id: "silver-toe-ring" },
-    { id: "silver-cuff" },
-    { id: "silver-choker" },
-    { id: "silver-charm" },
-    { id: "silver-brooch" },
-    { id: "silver-hairpin" },
-  ]
-}

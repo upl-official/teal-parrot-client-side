@@ -1,7 +1,7 @@
 "use client"
 
-import React from "react"
-import { createContext, useContext, useState, useEffect, useMemo } from "react"
+import type React from "react"
+import { createContext, useContext, useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import { AnimatePresence } from "framer-motion"
 
@@ -68,19 +68,6 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     }
   }
 
-  // Wrap children in a keyed element for AnimatePresence
-  const wrappedChildren = useMemo(() => {
-    return React.Children.map(children, (child) => {
-      // If child is a valid element, clone it with a key
-      if (React.isValidElement(child)) {
-        return React.cloneElement(child, {
-          key: pathname || "page",
-        })
-      }
-      return child
-    })
-  }, [children, pathname])
-
   return (
     <TransitionContext.Provider
       value={{
@@ -90,8 +77,8 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
         isFirstMount,
       }}
     >
-      <AnimatePresence mode="sync" onExitComplete={handleExitComplete}>
-        {wrappedChildren}
+      <AnimatePresence mode="wait" onExitComplete={handleExitComplete}>
+        {children}
       </AnimatePresence>
     </TransitionContext.Provider>
   )
