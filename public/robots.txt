@@ -1,0 +1,12 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Disallow admin and API routes
+Disallow: /api/
+Disallow: /admin/
+Disallow: /checkout/
+Disallow: /account/
+
+# Sitemap
+Sitemap: https://tealparrot.com/sitemap.xml
