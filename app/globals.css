@@ -16,6 +16,46 @@
   --scrollbar-track: #f1f1f1;
   --scrollbar-width: 8px;
   --scrollbar-border-radius: 4px;
+
+  /* Add shadcn/ui variables */
+  --radius: 0.5rem;
+
+  /* Base colors */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+
+  /* Card colors */
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+
+  /* Popover colors */
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+
+  /* Primary colors - using teal from the existing theme */
+  --primary: 189 65% 45%;
+  --primary-foreground: 210 40% 98%;
+
+  /* Secondary colors */
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+
+  /* Muted colors */
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+
+  /* Accent colors - using the existing accent color */
+  --accent: 36 25% 68%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+
+  /* Destructive colors */
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+
+  /* Border and input colors */
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 189 65% 45%;
 }
 
 @layer base {
