@@ -35,8 +35,11 @@ const nextConfig = {
     ],
     unoptimized: process.env.NODE_ENV === "development",
   },
+  // Disable static generation for not-found pages
   experimental: {
-    // Keep optimizeCss but ensure we have the dependency
+    // Disable static generation for not-found pages
+    skipTrailingSlashRedirect: true,
+    skipMiddlewareUrlNormalize: true,
   },
   typescript: {
     // Dangerously allow production builds to successfully complete even if
