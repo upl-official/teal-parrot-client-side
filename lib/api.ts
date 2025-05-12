@@ -86,9 +86,7 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 function processProductData(product: any): Product {
   return {
     ...product,
-    images:
-      product.images?.map(ensureFullImageUrl) ||
-      (product.image ? [ensureFullImageUrl(product.image)] : [PLACEHOLDER_IMAGE]),
+    images: product.images?.map(ensureFullImageUrl) || [PLACEHOLDER_IMAGE],
   }
 }
 
@@ -133,32 +131,6 @@ export async function fetchProductById(productId: string): Promise<Product> {
   return processProductData(data.data.product)
 }
 
-// New function to fetch complete product details for multiple products
-export async function fetchCompleteProductDetails(productIds: string[]): Promise<Record<string, Product>> {
-  if (!productIds.length) return {}
-
-  try {
-    const productDetailsMap: Record<string, Product> = {}
-
-    // Fetch details for each product in parallel
-    await Promise.all(
-      productIds.map(async (productId) => {
-        try {
-          const product = await fetchProductById(productId)
-          productDetailsMap[productId] = product
-        } catch (error) {
-          console.error(`Error fetching details for product ${productId}:`, error)
-        }
-      }),
-    )
-
-    return productDetailsMap
-  } catch (error) {
-    console.error("Error fetching complete product details:", error)
-    return {}
-  }
-}
-
 export async function fetchSimilarProducts(category?: string): Promise<Product[]> {
   const data = await apiRequest<{ success: boolean; data: { products: any[] } }>("/product/list")
 
@@ -170,28 +142,6 @@ export async function fetchSimilarProducts(category?: string): Promise<Product[]
 
   // Limit to 8 products for similar items
   return products.slice(0, 8)
-}
-
-// Add this function to fetch sizes
-export async function fetchSizes(): Promise<string[]> {
-  try {
-    const response = await apiRequest<{ success: boolean; data: string[] }>("/product/sizes")
-    return response.data
-  } catch (error) {
-    console.error("Error fetching sizes:", error)
-
-    // If the API doesn't support size fetching yet, extract sizes from products
-    const products = await fetchProducts()
-    const sizeSet = new Set<string>()
-
-    products.forEach((product) => {
-      if (product.size) {
-        sizeSet.add(product.size)
-      }
-    })
-
-    return Array.from(sizeSet).sort()
-  }
 }
 
 // Category APIs
@@ -279,40 +229,7 @@ export async function deleteUserAddress(addressId: string): Promise<void> {
 export async function fetchUserOrders(userId: string): Promise<any[]> {
   try {
     const data = await apiRequest<{ success: boolean; data: any[] }>(`/users/order/list?user=${userId}`)
-
-    // Get all product IDs from the orders to fetch complete details
-    const productIds = new Set<string>()
-    data.data.forEach((order) => {
-      order.items.forEach((item: any) => {
-        if (item.product && item.product._id) {
-          productIds.add(item.product._id)
-        }
-      })
-    })
-
-    // Fetch complete product details for all products in the orders
-    const productDetailsMap = await fetchCompleteProductDetails(Array.from(productIds))
-
-    // Enhance order items with complete product details
-    const enhancedOrders = data.data.map((order) => {
-      return {
-        ...order,
-        items: order.items.map((item: any) => {
-          if (item.product && item.product._id && productDetailsMap[item.product._id]) {
-            return {
-              ...item,
-              product: {
-                ...item.product,
-                ...productDetailsMap[item.product._id],
-              },
-            }
-          }
-          return item
-        }),
-      }
-    })
-
-    return enhancedOrders || []
+    return data.data || []
   } catch (error) {
     console.error("Error fetching orders:", error)
     return []
@@ -375,15 +292,9 @@ export async function fetchCartItems(userId: string): Promise<CartItem[]> {
       `/users/cart/list?userId=${userId}`,
     )
 
-    // Extract product IDs from cart items
-    const productIds = data.data.items.map((item) => item.productId)
-
-    // Fetch complete product details for all products in the cart
-    const productDetailsMap = await fetchCompleteProductDetails(productIds)
-
-    // Map the API response to our CartItem structure with enhanced product details
-    return (data.data.items || []).map((item) => {
-      const enhancedProduct = productDetailsMap[item.productId] || {
+    // Map the API response to our CartItem structure
+    return (data.data.items || []).map((item) => ({
+      product: {
         _id: item.productId,
         name: item.name,
         price: item.price,
@@ -391,14 +302,10 @@ export async function fetchCartItems(userId: string): Promise<CartItem[]> {
         category: item.category,
         material: item.material,
         grade: item.grade,
-        images: [PLACEHOLDER_IMAGE],
-      }
-
-      return {
-        product: enhancedProduct,
-        quantity: item.quantity,
-      }
-    })
+        images: [PLACEHOLDER_IMAGE], // Use custom placeholder image
+      },
+      quantity: item.quantity,
+    }))
   } catch (error) {
     console.error("Error fetching cart items:", error)
     return []
@@ -468,39 +375,22 @@ export async function fetchWishlistItems(userId: string): Promise<WishlistItem[]
       return DEV_MODE ? getFallbackWishlistItems() : []
     }
 
-    // Extract product IDs from wishlist items
-    let wishlistItems = []
-    if (Array.isArray(response.data)) {
-      wishlistItems = response.data
-    } else if (response.data.items && Array.isArray(response.data.items)) {
-      wishlistItems = response.data.items
-    } else {
-      wishlistItems = [response.data]
+    // If data is not an array, try to extract items from it
+    if (!Array.isArray(response.data)) {
+      console.warn("Wishlist data is not an array:", response.data)
+
+      // Check if data.items exists and is an array
+      if (response.data.items && Array.isArray(response.data.items)) {
+        console.info("Using items array from response.data")
+        return response.data.items.map(mapWishlistItem)
+      }
+
+      // If we can't find any valid data structure, return fallback or empty array
+      return DEV_MODE ? getFallbackWishlistItems() : []
     }
 
-    const productIds = wishlistItems.map((item: any) => item.productId || item._id)
-
-    // Fetch complete product details for all products in the wishlist
-    const productDetailsMap = await fetchCompleteProductDetails(productIds)
-
-    // Map the API response to our WishlistItem structure with enhanced product details
-    return wishlistItems.map((item: any) => {
-      const productId = item.productId || item._id
-      const enhancedProduct = productDetailsMap[productId] || {
-        _id: productId || "unknown-id",
-        name: item.name || "Product Name Unavailable",
-        price: item.price || 0,
-        description: item.description || "",
-        category: item.category || "",
-        material: item.material || "",
-        grade: item.grade || "",
-        images: [PLACEHOLDER_IMAGE],
-      }
-
-      return {
-        product: enhancedProduct,
-      }
-    })
+    // Map the API response to our WishlistItem structure
+    return response.data.map(mapWishlistItem)
   } catch (error) {
     console.error("Error fetching wishlist items:", error)
     // Return fallback data in development or empty array in production

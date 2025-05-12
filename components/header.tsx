@@ -2,10 +2,10 @@
 
 import React from "react"
 
-import { useState, useEffect, useRef, useCallback, Suspense } from "react"
+import { useState, useEffect, useRef, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Search, ShoppingCart, User, Menu, X, ChevronUp, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,27 +17,6 @@ import { cn } from "@/lib/utils"
 import { debounce } from "@/lib/debounce"
 import { SearchResults } from "./search/search-results"
 import type { Product } from "@/lib/types"
-
-// Create a wrapper for search functionality that uses useSearchParams
-function SearchWrapper({
-  children,
-  onSearch,
-}: {
-  children: React.ReactNode
-  onSearch: (query: string) => void
-}) {
-  const searchParams = useSearchParams()
-  const initialQuery = searchParams.get("search") || ""
-
-  // Pass the initial query to the parent component
-  useEffect(() => {
-    if (initialQuery) {
-      onSearch(initialQuery)
-    }
-  }, [initialQuery, onSearch])
-
-  return <>{children}</>
-}
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -525,41 +504,39 @@ export function Header() {
               >
                 <div className="container mx-auto py-4 px-4">
                   <div ref={searchContainerRef} className="relative">
-                    <Suspense fallback={<div className="h-16 bg-white/90 rounded-md"></div>}>
-                      <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
-                        <div className="relative flex-grow">
-                          <Input
-                            ref={searchInputRef}
-                            type="search"
-                            placeholder="Search for products..."
-                            className="w-full rounded-md border-0 bg-white/90 backdrop-blur-sm text-gray-800 pl-4 pr-10 py-6 text-base focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-teal-600"
-                            value={searchQuery}
-                            onChange={handleSearchChange}
-                          />
-                          {searchQuery && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSearchQuery("")
-                                setSearchResults([])
-                              }}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                              aria-label="Clear search"
-                            >
-                              <X className="h-5 w-5" />
-                            </button>
-                          )}
-                        </div>
-                        <Button
-                          type="submit"
-                          className="bg-white text-teal-600 hover:bg-gray-100 hover:text-teal-700 font-medium py-6 px-6 rounded-md transition-all duration-200 shadow-sm"
-                        >
-                          Search
-                        </Button>
+                    <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
+                      <div className="relative flex-grow">
+                        <Input
+                          ref={searchInputRef}
+                          type="search"
+                          placeholder="Search for products..."
+                          className="w-full rounded-md border-0 bg-white/90 backdrop-blur-sm text-gray-800 pl-4 pr-10 py-6 text-base focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-teal-600"
+                          value={searchQuery}
+                          onChange={handleSearchChange}
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSearchQuery("")
+                              setSearchResults([])
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            aria-label="Clear search"
+                          >
+                            <X className="h-5 w-5" />
+                          </button>
+                        )}
+                      </div>
+                      <Button
+                        type="submit"
+                        className="bg-white text-teal-600 hover:bg-gray-100 hover:text-teal-700 font-medium py-6 px-6 rounded-md transition-all duration-200 shadow-sm"
+                      >
+                        Search
+                      </Button>
 
-                        {/* Search Results - Rendered outside the form to avoid overflow issues */}
-                      </form>
-                    </Suspense>
+                      {/* Search Results - Rendered outside the form to avoid overflow issues */}
+                    </form>
 
                     {(searchResults.length > 0 || isSearching || (searchQuery && searchQuery.length > 2)) && (
                       <SearchResults
@@ -569,6 +546,26 @@ export function Header() {
                         onResultClick={handleSearchResultClick}
                       />
                     )}
+
+                    {/* Popular searches */}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className="text-white/80 text-sm">Popular:</span>
+                      <Link href="/collection?search=earrings" className="text-white text-sm hover:underline">
+                        Earrings
+                      </Link>
+                      <span className="text-white/50">•</span>
+                      <Link href="/collection?search=necklaces" className="text-white text-sm hover:underline">
+                        Necklaces
+                      </Link>
+                      <span className="text-white/50">•</span>
+                      <Link href="/collection?search=bracelets" className="text-white text-sm hover:underline">
+                        Bracelets
+                      </Link>
+                      <span className="text-white/50">•</span>
+                      <Link href="/collection?search=rings" className="text-white text-sm hover:underline">
+                        Rings
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </motion.div>

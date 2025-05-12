@@ -235,11 +235,13 @@ export default function PrivacyPolicyPage() {
               <p className="mb-2">Email: privacy@tealparrot.com</p>
               <p className="mb-2">Phone: +91 99999 99999</p>
               <p>
-                Address: Acotoman India Pvt. Ltd.
+                Address: 123 Silver Street
                 <br />
-                Sasthamangalam, Thiruvananthapuram
+                Jewelry District
                 <br />
-                Kerala, IND, 695010
+                New Delhi, 110001
+                <br />
+                India
               </p>
             </div>
           </section>

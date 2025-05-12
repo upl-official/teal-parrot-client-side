@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Trash2, Plus, Minus, ShoppingBag, Ruler } from "lucide-react"
+import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { fetchCartItems, removeFromCart, updateCartItem } from "@/lib/api"
 import type { CartItem as CartItemType } from "@/lib/types"
@@ -162,21 +162,7 @@ export function CartItems() {
                 <Link href={`/product/${item.product._id}`} className="hover:text-teal-600">
                   <h3 className="font-medium">{item.product.name}</h3>
                 </Link>
-
-                <div className="flex flex-wrap gap-x-4 mt-1">
-                  {item.product.material && <p className="text-sm text-gray-500">{item.product.material}</p>}
-
-                  {/* Display size information with icon */}
-                  {item.product.size && (
-                    <div className="flex items-center">
-                      <Ruler className="h-3.5 w-3.5 text-gray-500 mr-1" />
-                      <p className="text-sm text-gray-500">
-                        Size: <span className="font-medium">{item.product.size}</span>
-                      </p>
-                    </div>
-                  )}
-                </div>
-
+                {item.product.material && <p className="text-sm text-gray-500">{item.product.material}</p>}
                 <div className="mt-2 flex flex-wrap items-center gap-4">
                   <div className="flex items-center border border-gray-300 rounded-md">
                     <button

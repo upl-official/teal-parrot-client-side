@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
+import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,7 +24,6 @@ import {
 } from "lucide-react"
 import type { Address, CartItem, WishlistItem, Order } from "@/lib/types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useAccountNavigation } from "@/lib/account-navigation-context"
 
 export default function AccountPage() {
   const [addresses, setAddresses] = useState<Address[]>([])
@@ -33,82 +33,80 @@ export default function AccountPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuthStore()
-  const { navigateTo } = useAccountNavigation()
-
-  // Memoize the fetchUserData function to prevent unnecessary recreations
-  const fetchUserData = useCallback(async () => {
-    if (!user?._id) {
-      setLoading(false)
-      return
-    }
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      // Fetch each data type separately to handle individual failures
-      try {
-        const addressesData = await fetchUserAddresses(user._id)
-        setAddresses(addressesData)
-      } catch (err) {
-        console.error("Error fetching addresses:", err)
-        // Don't set global error, just log it
-      }
-
-      try {
-        const cartData = await fetchCartItems(user._id)
-        setCartItems(cartData)
-      } catch (err) {
-        console.error("Error fetching cart items:", err)
-      }
-
-      try {
-        // Add a retry mechanism for wishlist
-        let retries = 2
-        let wishlistData: WishlistItem[] = []
-
-        while (retries > 0) {
-          try {
-            wishlistData = await fetchWishlistItems(user._id)
-            break // If successful, exit the retry loop
-          } catch (err) {
-            console.error(`Error fetching wishlist (retry ${3 - retries}/2):`, err)
-            retries--
-            if (retries === 0) {
-              console.warn("All wishlist fetch retries failed")
-            } else {
-              // Wait before retrying
-              await new Promise((resolve) => setTimeout(resolve, 1000))
-            }
-          }
-        }
-
-        setWishlistItems(wishlistData)
-      } catch (err) {
-        console.error("Error in wishlist fetch process:", err)
-        // Set wishlist to empty array to prevent UI issues
-        setWishlistItems([])
-      }
-
-      try {
-        const ordersData = await fetchUserOrders(user._id)
-        setOrders(ordersData)
-      } catch (err) {
-        console.error("Error fetching orders:", err)
-      }
-    } catch (error) {
-      console.error("Error fetching user data:", error)
-      setError("There was a problem loading your account data. Some information may be incomplete.")
-    } finally {
-      setLoading(false)
-    }
-  }, [user])
 
   useEffect(() => {
-    fetchUserData()
-  }, [fetchUserData])
+    const fetchUserData = async () => {
+      if (!user?._id) {
+        setLoading(false)
+        return
+      }
 
-  // Format date for display - memoize this function if used frequently
+      setLoading(true)
+      setError(null)
+
+      try {
+        // Fetch each data type separately to handle individual failures
+        try {
+          const addressesData = await fetchUserAddresses(user._id)
+          setAddresses(addressesData)
+        } catch (err) {
+          console.error("Error fetching addresses:", err)
+          // Don't set global error, just log it
+        }
+
+        try {
+          const cartData = await fetchCartItems(user._id)
+          setCartItems(cartData)
+        } catch (err) {
+          console.error("Error fetching cart items:", err)
+        }
+
+        try {
+          // Add a retry mechanism for wishlist
+          let retries = 2
+          let wishlistData: WishlistItem[] = []
+
+          while (retries > 0) {
+            try {
+              wishlistData = await fetchWishlistItems(user._id)
+              break // If successful, exit the retry loop
+            } catch (err) {
+              console.error(`Error fetching wishlist (retry ${3 - retries}/2):`, err)
+              retries--
+              if (retries === 0) {
+                console.warn("All wishlist fetch retries failed")
+              } else {
+                // Wait before retrying
+                await new Promise((resolve) => setTimeout(resolve, 1000))
+              }
+            }
+          }
+
+          setWishlistItems(wishlistData)
+        } catch (err) {
+          console.error("Error in wishlist fetch process:", err)
+          // Set wishlist to empty array to prevent UI issues
+          setWishlistItems([])
+        }
+
+        try {
+          const ordersData = await fetchUserOrders(user._id)
+          setOrders(ordersData)
+        } catch (err) {
+          console.error("Error fetching orders:", err)
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error)
+        setError("There was a problem loading your account data. Some information may be incomplete.")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [user])
+
+  // Format date for display
   const formatDate = (dateString: string) => {
     try {
       return new Date(dateString).toLocaleDateString("en-US", {
@@ -144,6 +142,8 @@ export default function AccountPage() {
 
   return (
     <AnimatedContainer animation="fade" animationKey="dashboard-page">
+      {" "}
+      {/* Changed from 'key' to 'animationKey' */}
       {error && (
         <Alert variant="warning" className="mb-6 bg-amber-50 border-amber-200">
           <AlertCircle className="h-4 w-4 text-amber-500" />
@@ -156,7 +156,6 @@ export default function AccountPage() {
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        layout
       >
         {/* Personal Information Card */}
         <AnimatedCard delay={0.1}>
@@ -166,14 +165,11 @@ export default function AccountPage() {
                 <User className="h-5 w-5 text-teal-500" />
                 Personal Information
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-teal-500 hover:text-teal-600"
-                onClick={() => navigateTo("/account/profile")}
-              >
-                Edit
-              </Button>
+              <Link href="/account/profile">
+                <Button variant="ghost" size="sm" className="text-teal-500 hover:text-teal-600">
+                  Edit
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -202,14 +198,11 @@ export default function AccountPage() {
                 <MapPin className="h-5 w-5 text-teal-500" />
                 Addresses
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-teal-500 hover:text-teal-600"
-                onClick={() => navigateTo("/account/addresses")}
-              >
-                Manage
-              </Button>
+              <Link href="/account/addresses">
+                <Button variant="ghost" size="sm" className="text-teal-500 hover:text-teal-600">
+                  Manage
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -230,13 +223,11 @@ export default function AccountPage() {
             ) : (
               <div className="text-center py-4 text-gray-500">
                 <p>No addresses found</p>
-                <Button
-                  variant="link"
-                  className="text-teal-500 p-0 h-auto mt-1"
-                  onClick={() => navigateTo("/account/addresses")}
-                >
-                  Add an address
-                </Button>
+                <Link href="/account/addresses">
+                  <Button variant="link" className="text-teal-500 p-0 h-auto mt-1">
+                    Add an address
+                  </Button>
+                </Link>
               </div>
             )}
           </CardContent>
@@ -250,14 +241,11 @@ export default function AccountPage() {
                 <Package className="h-5 w-5 text-teal-500" />
                 Recent Orders
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-teal-500 hover:text-teal-600"
-                onClick={() => navigateTo("/account/orders")}
-              >
-                View All
-              </Button>
+              <Link href="/account/orders">
+                <Button variant="ghost" size="sm" className="text-teal-500 hover:text-teal-600">
+                  View All
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -300,13 +288,11 @@ export default function AccountPage() {
             ) : (
               <div className="text-center py-4 text-gray-500">
                 <p>No orders found</p>
-                <Button
-                  variant="link"
-                  className="text-teal-500 p-0 h-auto mt-1"
-                  onClick={() => navigateTo("/collection")}
-                >
-                  Browse products
-                </Button>
+                <Link href="/collection">
+                  <Button variant="link" className="text-teal-500 p-0 h-auto mt-1">
+                    Browse products
+                  </Button>
+                </Link>
               </div>
             )}
           </CardContent>
@@ -320,14 +306,11 @@ export default function AccountPage() {
                 <ShoppingBag className="h-5 w-5 text-teal-500" />
                 Shopping Cart
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-teal-500 hover:text-teal-600"
-                onClick={() => navigateTo("/cart")}
-              >
-                View Cart
-              </Button>
+              <Link href="/cart">
+                <Button variant="ghost" size="sm" className="text-teal-500 hover:text-teal-600">
+                  View Cart
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -367,13 +350,11 @@ export default function AccountPage() {
             ) : (
               <div className="text-center py-4 text-gray-500">
                 <p>Your cart is empty</p>
-                <Button
-                  variant="link"
-                  className="text-teal-500 p-0 h-auto mt-1"
-                  onClick={() => navigateTo("/collection")}
-                >
-                  Start shopping
-                </Button>
+                <Link href="/collection">
+                  <Button variant="link" className="text-teal-500 p-0 h-auto mt-1">
+                    Start shopping
+                  </Button>
+                </Link>
               </div>
             )}
           </CardContent>
@@ -387,14 +368,11 @@ export default function AccountPage() {
                 <Heart className="h-5 w-5 text-teal-500" />
                 Wishlist
               </CardTitle>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-teal-500 hover:text-teal-600"
-                onClick={() => navigateTo("/wishlist")}
-              >
-                View All
-              </Button>
+              <Link href="/wishlist">
+                <Button variant="ghost" size="sm" className="text-teal-500 hover:text-teal-600">
+                  View All
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
@@ -426,13 +404,11 @@ export default function AccountPage() {
             ) : (
               <div className="text-center py-4 text-gray-500">
                 <p>Your wishlist is empty</p>
-                <Button
-                  variant="link"
-                  className="text-teal-500 p-0 h-auto mt-1"
-                  onClick={() => navigateTo("/collection")}
-                >
-                  Discover products
-                </Button>
+                <Link href="/collection">
+                  <Button variant="link" className="text-teal-500 p-0 h-auto mt-1">
+                    Discover products
+                  </Button>
+                </Link>
               </div>
             )}
           </CardContent>
@@ -448,34 +424,34 @@ export default function AccountPage() {
           </CardHeader>
           <CardContent className="p-0">
             <nav className="flex flex-col">
-              <button
-                onClick={() => navigateTo("/collection")}
-                className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left w-full"
+              <Link
+                href="/collection"
+                className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <span>Browse Collection</span>
                 <ChevronRight className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => navigateTo("/cart")}
-                className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left w-full"
+              </Link>
+              <Link
+                href="/cart"
+                className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <span>View Cart</span>
                 <ChevronRight className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => navigateTo("/wishlist")}
-                className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left w-full"
+              </Link>
+              <Link
+                href="/wishlist"
+                className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <span>View Wishlist</span>
                 <ChevronRight className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => navigateTo("/contact")}
-                className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left w-full"
+              </Link>
+              <Link
+                href="/contact"
+                className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <span>Contact Support</span>
                 <ChevronRight className="h-4 w-4" />
-              </button>
+              </Link>
             </nav>
           </CardContent>
         </AnimatedCard>

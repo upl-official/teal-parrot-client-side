@@ -1,11 +1,14 @@
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import Image from "next/image"
-import { PageLayout } from "@/components/page-layout"
 import { AnimatedContainer } from "@/components/animated/animated-container"
 import { AnimatedImage } from "@/components/animated/animated-image"
 
 export default function BrandPage() {
   return (
-    <PageLayout>
+    <main className="flex min-h-screen flex-col">
+      <Header />
+
       {/* Hero Section */}
       <section className="relative h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-teal-900/90 to-teal-500/70 z-10"></div>
@@ -286,7 +289,7 @@ export default function BrandPage() {
             <AnimatedContainer animation="scale" delay={0.3} className="col-span-2">
               <div className="relative h-80 overflow-hidden rounded-lg shadow-lg group">
                 <Image
-                  src="https://teal-parrot.s3.eu-north-1.amazonaws.com/products/0233b2af-a166-450e-9989-0e355ea8c451.jpg"
+                  src="/silver-display.png"
                   alt="Silver Necklace"
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -334,7 +337,7 @@ export default function BrandPage() {
             <AnimatedContainer animation="scale" delay={0.6} className="col-span-2">
               <div className="relative h-80 overflow-hidden rounded-lg shadow-lg group">
                 <Image
-                  src="/placeholder.svg?key=rkt8q"
+                  src="/placeholder.svg?height=600&width=800&query=silver rings collection display"
                   alt="Silver Rings"
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-110"
@@ -349,6 +352,8 @@ export default function BrandPage() {
           </div>
         </div>
       </section>
-    </PageLayout>
+
+      <Footer />
+    </main>
   )
 }

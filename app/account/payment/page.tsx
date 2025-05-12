@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 
 export default function PaymentPage() {
   return (
-    <AnimatedContainer animation="fade" animationKey="payment-page">
+    <AnimatedContainer animation="fade" key="payment-page">
       <h1 className="text-2xl font-bold mb-6">Payment Methods</h1>
 
       <Alert className="mb-6 bg-blue-50 border-blue-200">

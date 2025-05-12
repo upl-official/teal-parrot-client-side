@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Trash2, ShoppingBag, Ruler } from "lucide-react"
+import { Trash2, ShoppingBag } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { removeFromWishlist, addToCart, fetchWishlistItems } from "@/lib/api"
 import type { WishlistItem } from "@/lib/types"
@@ -140,18 +140,7 @@ export function WishlistItems() {
                 <Link href={`/product/${item.product._id}`} className="hover:text-teal-600">
                   <h3 className="font-medium text-lg">{item.product.name}</h3>
                 </Link>
-                {item.product.material && <p className="text-sm text-gray-500 mb-1">{item.product.material}</p>}
-
-                {/* Display size information */}
-                {item.product.size && (
-                  <div className="flex items-center mb-2">
-                    <Ruler className="h-3.5 w-3.5 text-gray-500 mr-1.5" />
-                    <p className="text-sm text-gray-500">
-                      Size: <span className="font-medium">{item.product.size}</span>
-                    </p>
-                  </div>
-                )}
-
+                {item.product.material && <p className="text-sm text-gray-500 mb-2">{item.product.material}</p>}
                 <p className="font-bold text-lg mb-4">₹{item.product.price.toLocaleString("en-IN")}</p>
                 <div className="flex gap-2">
                   <Button

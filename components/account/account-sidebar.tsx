@@ -8,7 +8,6 @@ import { Card } from "@/components/ui/card"
 import { useAuthStore } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 import { useAccountNavigation } from "@/lib/account-navigation-context"
-import { useMemo } from "react"
 
 const sidebarItems = [
   {
@@ -54,62 +53,41 @@ const sidebarItems = [
   },
 ]
 
+const listItemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: {
+      delay: i * 0.1,
+      duration: 0.3,
+    },
+  }),
+}
+
 export function AccountSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { logout } = useAuthStore()
-  const { navigateTo, isInitialLoad } = useAccountNavigation()
+  const { navigateTo } = useAccountNavigation()
 
   const handleLogout = () => {
     logout()
     router.push("/")
   }
 
-  // Memoize the isActive function to prevent unnecessary calculations
-  const isActive = useMemo(() => {
-    return (href: string, exact = false) => {
-      if (exact) {
-        return pathname === href
-      }
-      return pathname.startsWith(href)
+  const isActive = (href: string, exact = false) => {
+    if (exact) {
+      return pathname === href
     }
-  }, [pathname])
-
-  // Staggered animation for sidebar items
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.05,
-        delayChildren: 0.1,
-        when: "beforeChildren",
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, x: -10 },
-    visible: {
-      opacity: 1,
-      x: 0,
-      transition: {
-        duration: 0.2,
-        ease: "easeOut",
-      },
-    },
+    return pathname.startsWith(href)
   }
 
   return (
     <Card className="overflow-hidden">
-      <motion.nav
-        className="flex flex-col"
-        initial={isInitialLoad ? "hidden" : "visible"}
-        animate="visible"
-        variants={containerVariants}
-      >
+      <nav className="flex flex-col">
         {sidebarItems.map((item, i) => (
-          <motion.div key={item.name} variants={itemVariants} layout>
+          <motion.div key={item.name} custom={i} initial="hidden" animate="visible" variants={listItemVariants}>
             <a
               href={item.href}
               className={cn(
@@ -140,7 +118,7 @@ export function AccountSidebar() {
           </motion.div>
         ))}
 
-        <motion.div variants={itemVariants} layout>
+        <motion.div custom={sidebarItems.length} initial="hidden" animate="visible" variants={listItemVariants}>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-red-500"
@@ -149,7 +127,7 @@ export function AccountSidebar() {
             <span>Logout</span>
           </button>
         </motion.div>
-      </motion.nav>
+      </nav>
     </Card>
   )
 }

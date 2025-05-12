@@ -1,7 +1,6 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { memo } from "react"
 import { motion } from "framer-motion"
 import { fadeIn } from "@/lib/animation-config"
 import { useInView } from "@/hooks/use-in-view"
@@ -14,93 +13,60 @@ interface AnimatedContainerProps {
   duration?: number
   variants?: any
   animation?: "fade" | "slide-up" | "slide-down" | "slide-left" | "slide-right" | "scale"
-  animationKey?: string
-  immediate?: boolean
+  animationKey?: string // Changed from 'key' to 'animationKey'
 }
 
-// Define animations outside component to prevent recreation on each render
-const animations = {
-  fade: {
-    hidden: { opacity: 0 },
-    visible: (props: { duration: number; delay: number }) => ({
-      opacity: 1,
-      transition: { duration: props.duration, delay: props.delay },
-    }),
-  },
-  "slide-up": {
-    hidden: { y: 30, opacity: 0 },
-    visible: (props: { duration: number; delay: number }) => ({
-      y: 0,
-      opacity: 1,
-      transition: { duration: props.duration, delay: props.delay },
-    }),
-  },
-  "slide-down": {
-    hidden: { y: -30, opacity: 0 },
-    visible: (props: { duration: number; delay: number }) => ({
-      y: 0,
-      opacity: 1,
-      transition: { duration: props.duration, delay: props.delay },
-    }),
-  },
-  "slide-left": {
-    hidden: { x: -30, opacity: 0 },
-    visible: (props: { duration: number; delay: number }) => ({
-      x: 0,
-      opacity: 1,
-      transition: { duration: props.duration, delay: props.delay },
-    }),
-  },
-  "slide-right": {
-    hidden: { x: 30, opacity: 0 },
-    visible: (props: { duration: number; delay: number }) => ({
-      x: 0,
-      opacity: 1,
-      transition: { duration: props.duration, delay: props.delay },
-    }),
-  },
-  scale: {
-    hidden: { scale: 0.9, opacity: 0 },
-    visible: (props: { duration: number; delay: number }) => ({
-      scale: 1,
-      opacity: 1,
-      transition: { duration: props.duration, delay: props.delay },
-    }),
-  },
-}
-
-function AnimatedContainerComponent({
+export function AnimatedContainer({
   children,
   className,
   delay = 0,
   duration = 0.3,
   variants = fadeIn,
   animation = "fade",
-  animationKey,
-  immediate = false,
+  animationKey, // Changed from 'key' to 'animationKey'
 }: AnimatedContainerProps) {
-  const { ref, isInView } = useInView({ threshold: 0.1, triggerOnce: true })
+  const { ref, isInView } = useInView({ threshold: 0.1 })
+
+  // Define different animation variants
+  const animations = {
+    fade: {
+      hidden: { opacity: 0 },
+      visible: { opacity: 1, transition: { duration, delay } },
+    },
+    "slide-up": {
+      hidden: { y: 30, opacity: 0 },
+      visible: { y: 0, opacity: 1, transition: { duration, delay } },
+    },
+    "slide-down": {
+      hidden: { y: -30, opacity: 0 },
+      visible: { y: 0, opacity: 1, transition: { duration, delay } },
+    },
+    "slide-left": {
+      hidden: { x: -30, opacity: 0 },
+      visible: { x: 0, opacity: 1, transition: { duration, delay } },
+    },
+    "slide-right": {
+      hidden: { x: 30, opacity: 0 },
+      visible: { x: 0, opacity: 1, transition: { duration, delay } },
+    },
+    scale: {
+      hidden: { scale: 0.9, opacity: 0 },
+      visible: { scale: 1, opacity: 1, transition: { duration, delay } },
+    },
+  }
 
   const selectedVariants = animations[animation] || variants
-
-  // If immediate is true, render content without waiting for animation to complete
-  // This helps prevent content flash in certain scenarios
-  if (immediate) {
-    return <div className={className}>{children}</div>
-  }
 
   return (
     <motion.div
       ref={ref}
-      key={animationKey}
+      key={animationKey} // Changed from 'key' to 'animationKey'
       initial="hidden"
       animate={isInView ? "visible" : "hidden"}
       variants={selectedVariants}
-      custom={{ duration, delay }}
       className={cn(className)}
-      // Optimize layout transitions
+      // Add layout transition optimization
       layoutDependency={false}
-      layout="position"
       transition={{
         layoutDependency: false,
         layout: { duration: 0 },
@@ -110,6 +76,3 @@ function AnimatedContainerComponent({
     </motion.div>
   )
 }
-
-// Memoize the component to prevent unnecessary re-renders
-export const AnimatedContainer = memo(AnimatedContainerComponent)

@@ -1,5 +1,8 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
+import Link from "next/link"
+
 export default function GlobalError({
   error,
   reset,
@@ -8,23 +11,19 @@ export default function GlobalError({
   reset: () => void
 }) {
   return (
-    <html lang="en">
+    <html>
       <body>
         <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
-          <h1 className="text-4xl font-bold text-teal-600 mb-4">Something went wrong</h1>
-          <p className="text-gray-600 mb-8 max-w-md">
-            We apologize for the inconvenience. Please try again or return to the home page.
-          </p>
+          <h1 className="text-6xl font-bold text-red-600 mb-4">Error</h1>
+          <h2 className="text-2xl font-semibold mb-4">Something went wrong</h2>
+          <p className="text-gray-600 mb-8 max-w-md">An unexpected error occurred. Our team has been notified.</p>
           <div className="flex gap-4">
-            <button
-              onClick={reset}
-              className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
-            >
+            <Button onClick={() => reset()} variant="outline">
               Try again
-            </button>
-            <a href="/" className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 transition-colors">
-              Return to Home
-            </a>
+            </Button>
+            <Button asChild>
+              <Link href="/">Return to Home</Link>
+            </Button>
           </div>
         </div>
       </body>

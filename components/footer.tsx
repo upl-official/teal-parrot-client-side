@@ -6,67 +6,9 @@ export function Footer() {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="bg-teal-500 text-white pt-10 overflow-hidden">
+    <footer className="bg-teal-500 text-white pt-10">
       <div className="container mx-auto px-4">
-        {/* Sitemap and Links Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-8">
-          {/* Sitemap */}
-          <div className="lg:col-span-2">
-            <h3 className="text-lg font-bold mb-4">Sitemap</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <h4 className="font-medium mb-2">Main Pages</h4>
-                <ul className="space-y-2">
-                  <li>
-                    <Link href="/" className="hover:text-gray-200">
-                      Home
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/collection" className="hover:text-gray-200">
-                      Collection
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/brand" className="hover:text-gray-200">
-                      Our Brand
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/contact" className="hover:text-gray-200">
-                      Contact
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Shopping</h4>
-                <ul className="space-y-2">
-                  <li>
-                    <Link href="/cart" className="hover:text-gray-200">
-                      Cart
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/wishlist" className="hover:text-gray-200">
-                      Wishlist
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/guide" className="hover:text-gray-200">
-                      Size Guide
-                    </Link>
-                  </li>
-                  <li>
-                    <Link href="/account" className="hover:text-gray-200">
-                      My Account
-                    </Link>
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           {/* Community Links */}
           <div>
             <h3 className="text-lg font-bold mb-4">Community</h3>
@@ -124,7 +66,34 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Logo and Legal Links */}
+          {/* Information Links */}
+          <div>
+            <h3 className="text-lg font-bold mb-4">Information</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/privacy-policy" className="hover:text-gray-200">
+                  Privacy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms-of-use" className="hover:text-gray-200">
+                  Usage
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms-and-conditions" className="hover:text-gray-200">
+                  Terms
+                </Link>
+              </li>
+              <li>
+                <Link href="/resources" className="hover:text-gray-200">
+                  Resources
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Logo and Social */}
           <div className="flex flex-col items-center md:items-end">
             <Image
               src="/logos/teal-parrot-logo-white.svg"
@@ -134,11 +103,11 @@ export function Footer() {
               className="h-24 w-auto mb-4"
               priority
             />
-            <div className="text-sm mb-4 flex flex-wrap justify-center md:justify-end gap-x-4 gap-y-2">
-              <Link href="/terms-and-conditions" className="hover:text-gray-200">
+            <div className="text-sm mb-4">
+              <Link href="/terms-and-conditions" className="hover:text-gray-200 mr-4">
                 Terms & Conditions
               </Link>
-              <Link href="/terms-of-use" className="hover:text-gray-200">
+              <Link href="/terms-of-use" className="hover:text-gray-200 mr-4">
                 Terms Of Use
               </Link>
               <Link href="/privacy-policy" className="hover:text-gray-200">

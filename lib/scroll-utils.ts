@@ -24,17 +24,6 @@ export function scrollToTop() {
   }
 }
 
-// Immediately reset scroll position to top
-export function resetScrollPosition() {
-  if (typeof window !== "undefined") {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "instant", // Use 'instant' to avoid any animation
-    })
-  }
-}
-
 // Check if element is in viewport
 export function isInViewport(element: HTMLElement): boolean {
   if (typeof window !== "undefined") {

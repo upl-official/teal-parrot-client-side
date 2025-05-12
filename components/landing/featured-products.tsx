@@ -1,124 +1,41 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useEffect, useRef, useCallback } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { motion, AnimatePresence, useInView } from "framer-motion"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { fetchProductById } from "@/lib/api"
+import { motion, useInView } from "framer-motion"
+import { ChevronLeft, ChevronRight, ShoppingBag, Heart } from "lucide-react"
+import { fetchFeaturedProducts } from "@/lib/api"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import type { Product } from "@/lib/types"
 
 // Default placeholder image path
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
 
 export function FeaturedProducts() {
-  const router = useRouter()
   const [products, setProducts] = useState<Product[]>([])
-  const [groupedProducts, setGroupedProducts] = useState<Record<string, Product[]>>({})
-  const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({})
-  const [hoveredProduct, setHoveredProduct] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [currentIndex, setCurrentIndex] = useState(0)
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({})
   const containerRef = useRef<HTMLDivElement>(null)
   const sectionRef = useRef(null)
   const isInView = useInView(sectionRef, { once: true, amount: 0.2 })
-  const timerRef = useRef<NodeJS.Timeout | null>(null)
-
-  const productIds = [
-    "67254422d6e125906ef60c21",
-    "67254f7b7b8e3ef7d0fcea1b",
-    "681a2e47e25bfb5f536c9f77",
-    "681dbe056675de8385b64fac",
-    "681dbe086675de8385b64fb2",
-  ]
-
-  const groupProductsByNameAndCategory = useCallback((products: Product[]) => {
-    const groups: Record<string, Product[]> = {}
-
-    products.forEach((product) => {
-      const key = `${product.name}-${product.category}`
-      if (!groups[key]) {
-        groups[key] = []
-      }
-      groups[key].push(product)
-    })
-
-    return groups
-  }, [])
 
   useEffect(() => {
     const getProducts = async () => {
-      setLoading(true)
-      const productPromises = productIds.map(async (id) => {
-        try {
-          return await fetchProductById(id)
-        } catch (error) {
-          console.error(`Error fetching product with ID ${id}:`, error)
-          return null
-        }
-      })
-
-      const fetchedProducts = (await Promise.all(productPromises)).filter(Boolean) as Product[]
-
-      // Group products by name and category
-      const grouped = groupProductsByNameAndCategory(fetchedProducts)
-      setGroupedProducts(grouped)
-
-      // Initialize selected sizes with the first size of each group
-      const initialSelectedSizes: Record<string, string> = {}
-      Object.entries(grouped).forEach(([key, products]) => {
-        if (products.length > 0 && products[0].size) {
-          initialSelectedSizes[key] = products[0].size
-        }
-      })
-      setSelectedSizes(initialSelectedSizes)
-
-      // Set products state to the first product of each group for backward compatibility
-      const representativeProducts = Object.values(grouped).map((group) => group[0])
-      setProducts(representativeProducts)
-
-      setLoading(false)
+      try {
+        const data = await fetchFeaturedProducts()
+        setProducts(data)
+      } catch (error) {
+        console.error("Error fetching featured products:", error)
+      } finally {
+        setLoading(false)
+      }
     }
 
     getProducts()
-
-    // Clean up function
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current)
-      }
-    }
-  }, [groupProductsByNameAndCategory])
-
-  const handleSizeSelect = useCallback(
-    (groupKey: string, size: string, e: React.MouseEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-
-      // Find the product with this size
-      const productsInGroup = groupedProducts[groupKey] || []
-      const productWithSize = productsInGroup.find((p) => p.size === size)
-
-      if (productWithSize) {
-        setSelectedSizes((prev) => ({
-          ...prev,
-          [groupKey]: size,
-        }))
-      }
-    },
-    [groupedProducts],
-  )
-
-  const navigateToProduct = useCallback(
-    (productId: string) => {
-      router.push(`/product/${productId}`)
-    },
-    [router],
-  )
+  }, [])
 
   const scrollLeft = () => {
     if (containerRef.current) {
@@ -200,126 +117,54 @@ export function FeaturedProducts() {
           </div>
         ) : (
           <div className="relative">
-            <div ref={containerRef} className="flex overflow-x-auto gap-8 pb-8 hide-scrollbar snap-x snap-mandatory">
-              {products.map((product, index) => {
-                const groupKey = `${product.name}-${product.category}`
-                const groupProducts = groupedProducts[groupKey] || []
-                const availableSizes = groupProducts.map((p) => p.size).filter(Boolean) as string[]
-                const selectedSize = selectedSizes[groupKey] || availableSizes[0] || ""
-
-                // Find the product with the selected size
-                const selectedProduct = groupProducts.find((p) => p.size === selectedSize) || product
-
-                return (
-                  <motion.div
-                    key={product._id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: index * 0.1 }}
-                    className="group"
-                    onMouseEnter={() => setHoveredProduct(groupKey)}
-                    onMouseLeave={() => setHoveredProduct(null)}
-                  >
-                    <div className="relative overflow-hidden rounded-lg bg-white shadow-md transition-all duration-300 hover:shadow-xl min-w-[300px] sm:min-w-[340px]">
-                      <div className="relative cursor-pointer" onClick={() => navigateToProduct(selectedProduct._id)}>
-                        <div className="relative h-80 overflow-hidden">
-                          <Image
-                            src={selectedProduct.images[0] || "/images/tp-placeholder-img.jpg"}
-                            alt={selectedProduct.name}
-                            fill
-                            className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          />
-                          {selectedProduct.discountPercentage && selectedProduct.discountPercentage > 0 && (
-                            <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-semibold">
-                              {selectedProduct.discountPercentage}% OFF
-                            </div>
-                          )}
+            <div ref={containerRef} className="flex overflow-x-auto gap-6 pb-8 hide-scrollbar snap-x snap-mandatory">
+              {displayProducts.map((product, index) => (
+                <motion.div
+                  key={product._id}
+                  initial={{ opacity: 0, y: 30 }}
+                  animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
+                  className="min-w-[280px] sm:min-w-[320px] snap-start"
+                >
+                  <Link href={`/product/${product._id}`}>
+                    <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 group">
+                      <div className="relative h-[320px] overflow-hidden">
+                        <Image
+                          src={imageErrors[product._id] ? PLACEHOLDER_IMAGE : product.images[0] || PLACEHOLDER_IMAGE}
+                          alt={product.name}
+                          fill
+                          className="object-cover transition-transform duration-700 group-hover:scale-110"
+                          onError={() => handleImageError(product._id)}
+                        />
+                        {product.discountPercentage && (
+                          <Badge className="absolute top-3 right-3 bg-red-500 text-white border-none">
+                            {product.discountPercentage}% OFF
+                          </Badge>
+                        )}
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                          <div className="flex gap-2 justify-center">
+                            <Button size="sm" variant="secondary" className="rounded-full w-10 h-10 p-0">
+                              <ShoppingBag className="h-5 w-5" />
+                            </Button>
+                            <Button size="sm" variant="secondary" className="rounded-full w-10 h-10 p-0">
+                              <Heart className="h-5 w-5" />
+                            </Button>
+                          </div>
                         </div>
-
-                        {availableSizes.length > 1 && (
-                          <AnimatePresence>
-                            {hoveredProduct === groupKey && (
-                              <motion.div
-                                className="absolute bottom-0 left-0 right-0 bg-black/70 p-4 transition-all duration-300"
-                                onClick={(e) => e.stopPropagation()} // Prevent navigating when clicking the size selector area
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                transition={{ duration: 0.2 }}
-                              >
-                                <p className="text-sm text-white/90 mb-2 font-medium">Select Size:</p>
-                                <div className="flex flex-wrap gap-2">
-                                  {availableSizes.map((size) => {
-                                    // Find the specific product with this size
-                                    const productWithThisSize = groupProducts.find((p) => p.size === size)
-                                    const productId = productWithThisSize?._id || selectedProduct._id
-
-                                    return (
-                                      <motion.button
-                                        key={size}
-                                        onClick={(e) => {
-                                          e.stopPropagation() // Prevent parent click
-                                          handleSizeSelect(groupKey, size, e)
-                                          // Navigate to the product page with the correct ID
-                                          navigateToProduct(productId)
-                                        }}
-                                        className={`min-w-[40px] h-8 px-3 text-sm font-medium rounded-md transition-all flex items-center justify-center ${
-                                          selectedSize === size
-                                            ? "bg-teal-500 text-white"
-                                            : "bg-white/90 text-gray-800 hover:bg-teal-100"
-                                        }`}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                      >
-                                        {size}
-                                      </motion.button>
-                                    )
-                                  })}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        )}
                       </div>
-
-                      <div className="p-5">
-                        <h3
-                          className="text-lg font-medium text-gray-900 mb-1 cursor-pointer"
-                          onClick={() => navigateToProduct(selectedProduct._id)}
-                        >
-                          {selectedProduct.name}
-                        </h3>
-
-                        {selectedSize && (
-                          <div className="mt-1 mb-2">
-                            <p className="text-sm text-gray-500">
-                              Size: <span className="font-medium">{selectedSize}</span>
-                            </p>
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-semibold text-gray-900">₹{selectedProduct.price}</span>
-                            {selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.price && (
-                              <span className="text-sm text-gray-500 line-through">
-                                ₹{selectedProduct.originalPrice}
-                              </span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => navigateToProduct(selectedProduct._id)}
-                            className="text-teal-600 hover:text-teal-700 text-sm font-medium flex items-center"
-                          >
-                            View
-                            <ChevronRight className="h-4 w-4 ml-1" />
-                          </button>
+                      <div className="p-4">
+                        <h3 className="font-medium text-lg mb-1 truncate">{product.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-lg">₹{product.price}</span>
+                          {product.originalPrice && product.originalPrice > product.price && (
+                            <span className="text-gray-500 line-through text-sm">₹{product.originalPrice}</span>
+                          )}
                         </div>
                       </div>
                     </div>
-                  </motion.div>
-                )
-              })}
+                  </Link>
+                </motion.div>
+              ))}
             </div>
 
             <button

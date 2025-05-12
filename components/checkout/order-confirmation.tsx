@@ -1,12 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { CheckCircle, Printer, ArrowRight, Package, Ruler } from "lucide-react"
+import { CheckCircle, Printer, ArrowRight, Package } from "lucide-react"
 import type { CartItem, Address } from "@/lib/types"
-import { fetchProductById } from "@/lib/api"
 
 // Add the import at the top
 import { motion } from "framer-motion"
@@ -27,52 +26,6 @@ export function OrderConfirmation({
   paymentMethod,
 }: OrderConfirmationProps) {
   const [isPrinting, setIsPrinting] = useState(false)
-  const [enhancedItems, setEnhancedItems] = useState<CartItem[]>(cartItems)
-  const [isLoading, setIsLoading] = useState(false)
-
-  // Fetch complete product details for each item
-  useEffect(() => {
-    const fetchCompleteDetails = async () => {
-      if (!cartItems.length) return
-
-      setIsLoading(true)
-      try {
-        const enhancedItemsPromises = cartItems.map(async (item) => {
-          // Skip if we already have complete product details
-          if (
-            item.product.images &&
-            item.product.images.length > 0 &&
-            item.product.images[0] !== "/images/tp-placeholder-img.jpg"
-          ) {
-            return item
-          }
-
-          try {
-            const productDetails = await fetchProductById(item.product._id)
-            return {
-              ...item,
-              product: {
-                ...item.product,
-                ...productDetails,
-              },
-            }
-          } catch (error) {
-            console.error(`Error fetching details for product ${item.product._id}:`, error)
-            return item
-          }
-        })
-
-        const updatedItems = await Promise.all(enhancedItemsPromises)
-        setEnhancedItems(updatedItems)
-      } catch (error) {
-        console.error("Error fetching product details:", error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchCompleteDetails()
-  }, [cartItems])
 
   const handlePrint = () => {
     setIsPrinting(true)
@@ -111,7 +64,7 @@ export function OrderConfirmation({
   }
 
   // Calculate subtotal
-  const subtotal = enhancedItems.reduce((total, item) => total + item.product.price * item.quantity, 0)
+  const subtotal = cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0)
 
   // Calculate shipping cost based on selected method
   const shippingCost = shippingMethod === "express" ? 150 : shippingMethod === "standard" ? 50 : 0
@@ -192,51 +145,32 @@ export function OrderConfirmation({
         <div className="space-y-6">
           <div>
             <h4 className="font-medium mb-2">Items Ordered</h4>
-            {isLoading ? (
-              <div className="flex justify-center py-4">
-                <div className="h-6 w-6 border-2 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
-                <span className="ml-2 text-sm text-gray-500">Loading item details...</span>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {enhancedItems.map((item) => (
-                  <div key={item.product._id} className="flex items-center">
-                    <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
-                      {item.product.images?.[0] ? (
-                        <Image
-                          src={item.product.images[0] || "/placeholder.svg"}
-                          alt={item.product.name}
-                          width={64}
-                          height={64}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Package className="h-8 w-8 text-gray-400" />
-                      )}
-                    </div>
-                    <div className="ml-4 flex-grow">
-                      <p className="font-medium">{item.product.name}</p>
-                      <div className="flex flex-wrap gap-x-3 mt-1">
-                        <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
-
-                        {/* Display size information with icon */}
-                        {item.product.size && (
-                          <div className="flex items-center">
-                            <Ruler className="h-3.5 w-3.5 text-gray-500 mr-1" />
-                            <p className="text-sm text-gray-500">
-                              Size: <span className="font-medium">{item.product.size}</span>
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">₹{item.product.price * item.quantity}</p>
-                    </div>
+            <div className="space-y-4">
+              {cartItems.map((item) => (
+                <div key={item.product._id} className="flex items-center">
+                  <div className="w-16 h-16 bg-gray-100 rounded-md overflow-hidden flex items-center justify-center">
+                    {item.product.images?.[0] ? (
+                      <Image
+                        src={item.product.images[0] || "/placeholder.svg"}
+                        alt={item.product.name}
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Package className="h-8 w-8 text-gray-400" />
+                    )}
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="ml-4 flex-grow">
+                    <p className="font-medium">{item.product.name}</p>
+                    <p className="text-sm text-gray-500">Quantity: {item.quantity}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">₹{item.product.price * item.quantity}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

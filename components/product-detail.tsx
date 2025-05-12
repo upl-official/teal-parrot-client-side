@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -20,35 +20,19 @@ import {
   ZoomIn,
   Check,
   X,
-  Ruler,
 } from "lucide-react"
-import {
-  fetchProductById,
-  fetchProducts,
-  addToCart,
-  addToWishlist,
-  getCurrentUserId,
-  fetchWishlistItems,
-} from "@/lib/api"
+import { fetchProductById, addToCart, addToWishlist, getCurrentUserId, fetchWishlistItems } from "@/lib/api"
 import type { Product } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { motion, AnimatePresence } from "framer-motion"
 import { redirectToLogin } from "@/lib/utils"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 
 // Default placeholder image path
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
@@ -239,15 +223,6 @@ function formatInlineStyles(text: string): React.ReactNode[] {
   return [currentText]
 }
 
-interface SizeVariant {
-  id: string
-  size: string
-  price: number
-  originalPrice?: number
-  stock: number
-  images?: string[]
-}
-
 export function ProductDetail({ productId }: { productId: string }) {
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
@@ -256,10 +231,6 @@ export function ProductDetail({ productId }: { productId: string }) {
   const [quantity, setQuantity] = useState(1)
   const [isInWishlist, setIsInWishlist] = useState(false)
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({})
-  const [sizeVariants, setSizeVariants] = useState<SizeVariant[]>([])
-  const [selectedSizeVariant, setSelectedSizeVariant] = useState<SizeVariant | null>(null)
-  const [showSizeGuide, setShowSizeGuide] = useState(false)
-  const [isUpdatingVariant, setIsUpdatingVariant] = useState(false)
 
   // Add or update these zoom-related states
   const [zoomPosition, setZoomPosition] = useState({ x: 0, y: 0 })
@@ -273,63 +244,16 @@ export function ProductDetail({ productId }: { productId: string }) {
   const [addedToCart, setAddedToCart] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
-  const searchParams = useSearchParams()
 
-  // Fetch the main product and its size variants
+  // Fetch product details and check if it's in wishlist
   useEffect(() => {
     const getProduct = async () => {
       try {
-        setLoading(true)
-        // Fetch the main product
-        const mainProduct = await fetchProductById(productId)
-        setProduct(mainProduct)
-
-        if (mainProduct.images && mainProduct.images.length > 0) {
-          setMainImage(mainProduct.images[0])
+        const data = await fetchProductById(productId)
+        setProduct(data)
+        if (data.images && data.images.length > 0) {
+          setMainImage(data.images[0])
         }
-
-        // Initialize the selected size variant with the current product
-        const currentVariant: SizeVariant = {
-          id: mainProduct._id,
-          size: mainProduct.size || "Default",
-          price: mainProduct.price,
-          originalPrice: mainProduct.originalPrice,
-          stock: mainProduct.stock || 0,
-          images: mainProduct.images,
-        }
-        setSelectedSizeVariant(currentVariant)
-
-        // Now fetch all products to find variants with the same name
-        const allProducts = await fetchProducts()
-
-        // Find variants with the same name and category but different sizes
-        const variants = allProducts
-          .filter(
-            (p) =>
-              p.name === mainProduct.name && p.category === mainProduct.category && p._id !== mainProduct._id && p.size, // Only include products that have a size
-          )
-          .map((p) => ({
-            id: p._id,
-            size: p.size || "Default",
-            price: p.price,
-            originalPrice: p.originalPrice,
-            stock: p.stock || 0,
-            images: p.images,
-          }))
-
-        // Add the current product to the variants list
-        const allVariants = [currentVariant, ...variants].sort((a, b) => {
-          // Try to sort numerically if possible
-          const aSize = Number.parseFloat(a.size)
-          const bSize = Number.parseFloat(b.size)
-          if (!isNaN(aSize) && !isNaN(bSize)) {
-            return aSize - bSize
-          }
-          // Fall back to string comparison
-          return a.size.localeCompare(b.size)
-        })
-
-        setSizeVariants(allVariants)
 
         // Check if product is in wishlist
         const userId = getCurrentUserId()
@@ -352,65 +276,6 @@ export function ProductDetail({ productId }: { productId: string }) {
 
     getProduct()
   }, [productId])
-
-  // Handle size variant selection
-  const handleSizeSelect = useCallback(
-    async (variant: SizeVariant) => {
-      if (selectedSizeVariant?.id === variant.id) return
-
-      setIsUpdatingVariant(true)
-      setSelectedSizeVariant(variant)
-
-      // Update URL with the selected variant ID without navigating
-      const url = new URL(window.location.href)
-      url.searchParams.set("variant", variant.id)
-      window.history.pushState({ path: url.toString() }, "", url.toString())
-
-      // If this is a different product ID than the current one, fetch its details
-      if (variant.id !== productId) {
-        try {
-          const variantProduct = await fetchProductById(variant.id)
-
-          // Update product details
-          setProduct(variantProduct)
-
-          // Update main image if there are variant-specific images
-          if (variantProduct.images && variantProduct.images.length > 0) {
-            setMainImage(variantProduct.images[0])
-          }
-
-          // Check if this variant is in the wishlist
-          const userId = getCurrentUserId()
-          if (userId) {
-            try {
-              const wishlistItems = await fetchWishlistItems(userId)
-              const isInList = wishlistItems.some((item) => item.product._id === variant.id)
-              setIsInWishlist(isInList)
-            } catch (error) {
-              console.error("Error checking wishlist status:", error)
-            }
-          }
-        } catch (error) {
-          console.error("Error fetching variant product:", error)
-          toast({
-            title: "Error",
-            description: "Failed to load product variant details. Please try again.",
-            variant: "destructive",
-          })
-        }
-      } else {
-        // If it's the same product ID, just update the image if needed
-        if (variant.images && variant.images.length > 0) {
-          setMainImage(variant.images[0])
-        }
-      }
-
-      // Reset quantity to 1 when changing variants
-      setQuantity(1)
-      setIsUpdatingVariant(false)
-    },
-    [productId, selectedSizeVariant?.id, toast],
-  )
 
   // Reset added to cart state after 3 seconds
   useEffect(() => {
@@ -484,7 +349,7 @@ export function ProductDetail({ productId }: { productId: string }) {
   }
 
   const handleAddToCart = async () => {
-    if (!product || !selectedSizeVariant) return
+    if (!product) return
 
     try {
       setIsAddingToCart(true)
@@ -500,16 +365,15 @@ export function ProductDetail({ productId }: { productId: string }) {
         return
       }
 
-      // Use the selected variant ID instead of the main product ID
-      console.log("Adding to cart:", { userId, productId: selectedSizeVariant.id, quantity })
-      await addToCart(userId, selectedSizeVariant.id, quantity)
+      console.log("Adding to cart:", { userId, productId: product._id, quantity })
+      await addToCart(userId, product._id, quantity)
 
       // Show success state
       setAddedToCart(true)
 
       toast({
         title: "Added to cart",
-        description: `${product.name} (Size: ${selectedSizeVariant.size}) has been added to your cart.`,
+        description: `${product.name} has been added to your cart.`,
       })
     } catch (error) {
       console.error("Error adding to cart:", error)
@@ -524,7 +388,7 @@ export function ProductDetail({ productId }: { productId: string }) {
   }
 
   const handleBuyNow = async () => {
-    if (!product || !selectedSizeVariant) return
+    if (!product) return
 
     try {
       setIsAddingToCart(true)
@@ -540,8 +404,7 @@ export function ProductDetail({ productId }: { productId: string }) {
         return
       }
 
-      // Use the selected variant ID
-      await addToCart(userId, selectedSizeVariant.id, quantity)
+      await addToCart(userId, product._id, quantity)
       setIsAddingToCart(false)
       router.push("/cart")
     } catch (error) {
@@ -556,7 +419,7 @@ export function ProductDetail({ productId }: { productId: string }) {
   }
 
   const handleAddToWishlist = async () => {
-    if (!product || !selectedSizeVariant) return
+    if (!product) return
 
     try {
       const userId = getCurrentUserId()
@@ -571,12 +434,11 @@ export function ProductDetail({ productId }: { productId: string }) {
         return
       }
 
-      // Use the selected variant ID
-      await addToWishlist(userId, selectedSizeVariant.id)
+      await addToWishlist(userId, product._id)
       setIsInWishlist(true)
       toast({
         title: "Added to wishlist",
-        description: `${product.name} (Size: ${selectedSizeVariant.size}) has been added to your wishlist.`,
+        description: `${product.name} has been added to your wishlist.`,
       })
     } catch (error) {
       console.error("Error adding to wishlist:", error)
@@ -630,7 +492,7 @@ export function ProductDetail({ productId }: { productId: string }) {
     )
   }
 
-  if (!product || !selectedSizeVariant) {
+  if (!product) {
     return (
       <div className="container mx-auto px-4 py-16 flex justify-center items-center min-h-[60vh]">
         <div className="text-center">
@@ -644,11 +506,10 @@ export function ProductDetail({ productId }: { productId: string }) {
 
   // Calculate discount percentage if not provided
   const discountPercentage =
-    selectedSizeVariant.originalPrice && selectedSizeVariant.price < selectedSizeVariant.originalPrice
-      ? Math.round(
-          ((selectedSizeVariant.originalPrice - selectedSizeVariant.price) / selectedSizeVariant.originalPrice) * 100,
-        )
-      : 0
+    product.discountPercentage ||
+    (product.originalPrice && product.price < product.originalPrice
+      ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+      : 0)
 
   return (
     <div className="bg-white">
@@ -683,40 +544,25 @@ export function ProductDetail({ productId }: { productId: string }) {
                 onTouchEnd={handleTouchEnd}
                 onClick={isMobile ? toggleZoomModal : undefined}
               >
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={mainImage}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="w-full h-full"
-                  >
-                    <Image
-                      src={
-                        getImageSrc(mainImage) ||
-                        (selectedSizeVariant.images && selectedSizeVariant.images[0]) ||
-                        PLACEHOLDER_IMAGE
-                      }
-                      alt={product.name}
-                      width={600}
-                      height={600}
-                      className="object-cover w-full h-full"
-                      priority
-                      onError={() => handleImageError(mainImage)}
-                    />
-                  </motion.div>
-                </AnimatePresence>
-
-                {/* Loading overlay when updating variant */}
-                {isUpdatingVariant && (
-                  <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
-                  </div>
-                )}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="w-full h-full"
+                >
+                  <Image
+                    src={getImageSrc(mainImage) || product.images[0] || PLACEHOLDER_IMAGE}
+                    alt={product.name}
+                    width={600}
+                    height={600}
+                    className="object-cover w-full h-full"
+                    priority
+                    onError={() => handleImageError(mainImage)}
+                  />
+                </motion.div>
 
                 {/* Zoom lens overlay for desktop */}
-                {!isMobile && isZoomed && !isUpdatingVariant && (
+                {!isMobile && isZoomed && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -727,7 +573,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                     <div
                       className="absolute inset-0 bg-no-repeat"
                       style={{
-                        backgroundImage: `url(${getImageSrc(mainImage) || (selectedSizeVariant.images && selectedSizeVariant.images[0]) || PLACEHOLDER_IMAGE})`,
+                        backgroundImage: `url(${getImageSrc(mainImage) || product.images[0] || PLACEHOLDER_IMAGE})`,
                         backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
                         backgroundSize: `${zoomLevel * 100}%`,
                         backgroundRepeat: "no-repeat",
@@ -800,11 +646,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                   <div className="flex-1 overflow-auto touch-pan-y" onTouchMove={handleTouchMove}>
                     <div className="w-full h-full min-h-[80vh] relative flex items-center justify-center">
                       <Image
-                        src={
-                          getImageSrc(mainImage) ||
-                          (selectedSizeVariant.images && selectedSizeVariant.images[0]) ||
-                          PLACEHOLDER_IMAGE
-                        }
+                        src={getImageSrc(mainImage) || product.images[0] || PLACEHOLDER_IMAGE}
                         alt={product.name}
                         width={1200}
                         height={1200}
@@ -823,7 +665,7 @@ export function ProductDetail({ productId }: { productId: string }) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
             >
-              {selectedSizeVariant.images?.map((image, index) => (
+              {product.images.map((image, index) => (
                 <motion.div
                   key={index}
                   className={`aspect-square overflow-hidden rounded-lg cursor-pointer transition-all duration-300 ${
@@ -861,7 +703,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.2 }}
               >
-                {selectedSizeVariant.stock > 0 ? (
+                {product.stock && product.stock > 0 ? (
                   <Badge className="bg-green-100 text-green-800 hover:bg-green-200">In Stock</Badge>
                 ) : (
                   <Badge variant="destructive">Out of Stock</Badge>
@@ -902,141 +744,22 @@ export function ProductDetail({ productId }: { productId: string }) {
 
             {/* Price Section */}
             <div className="bg-gray-50 p-4 rounded-lg">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={`price-${selectedSizeVariant.id}`}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.2 }}
-                  className="flex items-center space-x-4"
-                >
-                  <span className="text-3xl font-bold text-gray-900">
-                    ₹{selectedSizeVariant.price.toLocaleString("en-IN")}
+              <div className="flex items-center space-x-4">
+                <span className="text-3xl font-bold text-gray-900">₹{product.price.toLocaleString("en-IN")}</span>
+                {product.originalPrice && product.originalPrice > product.price && (
+                  <span className="text-xl text-gray-500 line-through">
+                    ₹{product.originalPrice.toLocaleString("en-IN")}
                   </span>
-                  {selectedSizeVariant.originalPrice &&
-                    selectedSizeVariant.originalPrice > selectedSizeVariant.price && (
-                      <span className="text-xl text-gray-500 line-through">
-                        ₹{selectedSizeVariant.originalPrice.toLocaleString("en-IN")}
-                      </span>
-                    )}
-                  {discountPercentage > 0 && (
-                    <span className="text-green-600 font-medium">
-                      Save ₹{(selectedSizeVariant.originalPrice! - selectedSizeVariant.price).toLocaleString("en-IN")}
-                    </span>
-                  )}
-                </motion.div>
-              </AnimatePresence>
+                )}
+                {discountPercentage > 0 && (
+                  <span className="text-green-600 font-medium">
+                    Save ₹{(product.originalPrice! - product.price).toLocaleString("en-IN")}
+                  </span>
+                )}
+              </div>
 
               {/* Tax and shipping info */}
               <p className="text-sm text-gray-500 mt-2">Inclusive of all taxes</p>
-
-              {/* Size Selection - Moved directly below price */}
-              <div className="mt-4 border-t border-gray-200 pt-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-gray-900">Select Size</h3>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button
-                        className="flex items-center text-sm text-teal-600 hover:text-teal-700"
-                        onClick={() => setShowSizeGuide(true)}
-                      >
-                        <Ruler className="h-4 w-4 mr-1" />
-                        Size Guide
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <DialogHeader>
-                        <DialogTitle>Size Guide</DialogTitle>
-                        <DialogDescription>Find your perfect fit with our detailed size chart.</DialogDescription>
-                      </DialogHeader>
-                      <div className="p-4">
-                        {/* Size guide content - would be tailored to the product category */}
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm border-collapse">
-                            <thead>
-                              <tr className="bg-gray-100">
-                                <th className="border border-gray-300 p-2 text-left">Size</th>
-                                <th className="border border-gray-300 p-2 text-left">Diameter (mm)</th>
-                                <th className="border border-gray-300 p-2 text-left">US Size</th>
-                                <th className="border border-gray-300 p-2 text-left">UK Size</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td className="border border-gray-300 p-2">XS</td>
-                                <td className="border border-gray-300 p-2">14-15</td>
-                                <td className="border border-gray-300 p-2">3-4</td>
-                                <td className="border border-gray-300 p-2">F-G</td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 p-2">S</td>
-                                <td className="border border-gray-300 p-2">15-16</td>
-                                <td className="border border-gray-300 p-2">4-5</td>
-                                <td className="border border-gray-300 p-2">H-I</td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 p-2">M</td>
-                                <td className="border border-gray-300 p-2">16-17</td>
-                                <td className="border border-gray-300 p-2">5-6</td>
-                                <td className="border border-gray-300 p-2">J-K</td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 p-2">L</td>
-                                <td className="border border-gray-300 p-2">17-18</td>
-                                <td className="border border-gray-300 p-2">6-7</td>
-                                <td className="border border-gray-300 p-2">L-M</td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 p-2">XL</td>
-                                <td className="border border-gray-300 p-2">18-19</td>
-                                <td className="border border-gray-300 p-2">7-8</td>
-                                <td className="border border-gray-300 p-2">N-O</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        <div className="mt-4">
-                          <h4 className="font-medium mb-2">How to Measure</h4>
-                          <p className="text-gray-600 mb-2">
-                            For the most accurate measurement, use a string or paper strip to wrap around your finger.
-                            Mark where the ends meet and measure the length against a ruler.
-                          </p>
-                          <p className="text-gray-600">
-                            If you're between sizes, we recommend sizing up for a more comfortable fit.
-                          </p>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-
-                <div className="grid grid-cols-5 gap-2">
-                  {sizeVariants.map((variant) => (
-                    <motion.button
-                      key={variant.id}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleSizeSelect(variant)}
-                      className={`relative p-2 border rounded-md text-center text-sm ${
-                        selectedSizeVariant.id === variant.id
-                          ? "border-teal-500 bg-teal-50 text-teal-700 font-medium"
-                          : variant.stock > 0
-                            ? "border-gray-300 hover:border-teal-300"
-                            : "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
-                      disabled={variant.stock <= 0 || isUpdatingVariant}
-                    >
-                      {variant.size}
-                      {variant.stock <= 0 && (
-                        <span className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-md text-xs text-gray-500">
-                          Out of stock
-                        </span>
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
             </div>
 
             {/* Quantity Selector and CTA Buttons */}
@@ -1055,14 +778,14 @@ export function ProductDetail({ productId }: { productId: string }) {
                   <button
                     onClick={() => setQuantity(Math.min(10, quantity + 1))}
                     className="px-3 py-1 border-l border-gray-300 hover:bg-gray-100"
-                    disabled={selectedSizeVariant.stock !== undefined && quantity >= selectedSizeVariant.stock}
+                    disabled={product.stock !== undefined && quantity >= product.stock}
                   >
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
-                {selectedSizeVariant.stock !== undefined && (
+                {product.stock !== undefined && (
                   <span className="text-sm text-gray-500">
-                    {selectedSizeVariant.stock > 0 ? `${selectedSizeVariant.stock} available` : "Out of stock"}
+                    {product.stock > 0 ? `${product.stock} available` : "Out of stock"}
                   </span>
                 )}
               </div>
@@ -1075,11 +798,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                       ? "bg-green-500 hover:bg-green-600 text-white"
                       : "bg-teal-500 hover:bg-teal-600 text-white"
                   }`}
-                  disabled={
-                    (selectedSizeVariant.stock !== undefined && selectedSizeVariant.stock <= 0) ||
-                    isAddingToCart ||
-                    isUpdatingVariant
-                  }
+                  disabled={(product.stock !== undefined && product.stock <= 0) || isAddingToCart}
                 >
                   {isAddingToCart ? (
                     <>
@@ -1101,11 +820,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                 <Button
                   onClick={handleBuyNow}
                   className="bg-orange-500 hover:bg-orange-600 text-white py-6 text-base"
-                  disabled={
-                    (selectedSizeVariant.stock !== undefined && selectedSizeVariant.stock <= 0) ||
-                    isAddingToCart ||
-                    isUpdatingVariant
-                  }
+                  disabled={(product.stock !== undefined && product.stock <= 0) || isAddingToCart}
                 >
                   {isAddingToCart ? (
                     <>
@@ -1123,7 +838,6 @@ export function ProductDetail({ productId }: { productId: string }) {
                   onClick={handleAddToWishlist}
                   variant="ghost"
                   className={`text-gray-700 hover:bg-gray-100 ${isInWishlist ? "text-red-500" : ""}`}
-                  disabled={isUpdatingVariant}
                 >
                   {isInWishlist ? (
                     <HeartFilled className="w-5 h-5 mr-2 text-red-500 fill-red-500" />
@@ -1132,12 +846,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                   )}
                   {isInWishlist ? "In Wishlist" : "Add to Wishlist"}
                 </Button>
-                <Button
-                  onClick={handleShareProduct}
-                  variant="ghost"
-                  className="text-gray-700 hover:bg-gray-100"
-                  disabled={isUpdatingVariant}
-                >
+                <Button onClick={handleShareProduct} variant="ghost" className="text-gray-700 hover:bg-gray-100">
                   <Share2 className="w-5 h-5 mr-2" />
                   Share
                 </Button>
@@ -1207,10 +916,10 @@ export function ProductDetail({ productId }: { productId: string }) {
                         <td className="py-3 px-4">{product.gem}</td>
                       </tr>
                     )}
-                    {selectedSizeVariant.size && (
+                    {product.size && (
                       <tr className="border-b border-gray-200">
-                        <td className="py-3 px-4 font-medium">Size</td>
-                        <td className="py-3 px-4">{selectedSizeVariant.size}</td>
+                        <td className="py-3 px-4 font-medium">Available Sizes</td>
+                        <td className="py-3 px-4">{product.size}</td>
                       </tr>
                     )}
                     {product.category && (

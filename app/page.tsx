@@ -1,4 +1,5 @@
-import { PageLayout } from "@/components/page-layout"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import { HeroSection } from "@/components/landing/hero-section"
 import { FeaturedCollections } from "@/components/landing/featured-collections"
 import { FeaturedProducts } from "@/components/landing/featured-products"
@@ -13,18 +14,22 @@ import { FeaturedProductSection } from "@/components/landing/featured-product-se
 
 export default function Home() {
   return (
-    <PageLayout>
-      <HeroSection />
-      <FeaturedCollections />
-      <FeaturedQuoteSection />
-      <FeaturedProducts />
-      <GiftSuggestionSection />
-      <BenefitsSection />
-      <QuoteCtaSection />
-      <FeaturedProductSection />
-      <TestimonialsSection />
-      <PromoBanner />
-      <NewsletterSection />
-    </PageLayout>
+    <main className="flex min-h-screen flex-col">
+      <Header />
+      <div className="flex-grow">
+        <HeroSection />
+        <FeaturedCollections />
+        <FeaturedQuoteSection />
+        <FeaturedProducts />
+        <GiftSuggestionSection />
+        <BenefitsSection />
+        <QuoteCtaSection />
+        <FeaturedProductSection />
+        <TestimonialsSection />
+        <PromoBanner />
+        <NewsletterSection />
+      </div>
+      <Footer />
+    </main>
   )
 }

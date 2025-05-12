@@ -1,89 +1,43 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useState, useCallback, useRef, useEffect } from "react"
+import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
 type AccountNavigationContextType = {
-  navigateTo: (path: string) => void
   isNavigating: boolean
-  activeSection: string
-  isInitialLoad: boolean
+  navigateTo: (path: string) => void
 }
 
 const AccountNavigationContext = createContext<AccountNavigationContextType | undefined>(undefined)
 
-export function AccountNavigationProvider({ children }: { children: React.ReactNode }) {
+export function AccountNavigationProvider({ children }: { children: ReactNode }) {
+  const [isNavigating, setIsNavigating] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
-  const [isNavigating, setIsNavigating] = useState(false)
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
-  const previousPath = useRef<string | null>(null)
-  const navigationTimer = useRef<NodeJS.Timeout | null>(null)
-
-  // Extract the active section from the pathname
-  const activeSection = pathname.split("/").pop() || "dashboard"
-
-  useEffect(() => {
-    // After initial render, set isInitialLoad to false
-    const timer = setTimeout(() => {
-      setIsInitialLoad(false)
-    }, 800)
-
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Reset navigation state after pathname changes
-  useEffect(() => {
-    if (previousPath.current && previousPath.current !== pathname) {
-      // Reset scroll position immediately when changing account sections
-      if (typeof window !== "undefined") {
-        window.scrollTo({
-          top: 0,
-          left: 0,
-          behavior: "instant",
-        })
-      }
-
-      // Small delay to ensure content is loaded
-      navigationTimer.current = setTimeout(() => {
-        setIsNavigating(false)
-      }, 300)
-    }
-    previousPath.current = pathname
-
-    return () => {
-      if (navigationTimer.current) {
-        clearTimeout(navigationTimer.current)
-      }
-    }
-  }, [pathname])
 
   const navigateTo = useCallback(
     (path: string) => {
-      if (pathname !== path) {
-        setIsNavigating(true)
+      if (pathname === path) return
 
-        // Reset scroll position immediately before navigation
-        if (typeof window !== "undefined") {
-          window.scrollTo({
-            top: 0,
-            left: 0,
-            behavior: "instant",
-          })
-        }
+      setIsNavigating(true)
 
-        // Small delay before navigation to ensure UI state updates
+      // Use setTimeout to simulate a loading state
+      // This gives the UI time to show a loading indicator
+      setTimeout(() => {
+        router.push(path)
+
+        // Reset the navigating state after a short delay
+        // This allows the animation to complete
         setTimeout(() => {
-          router.push(path)
-        }, 50)
-      }
+          setIsNavigating(false)
+        }, 300)
+      }, 100)
     },
     [router, pathname],
   )
 
   return (
-    <AccountNavigationContext.Provider value={{ navigateTo, isNavigating, activeSection, isInitialLoad }}>
+    <AccountNavigationContext.Provider value={{ isNavigating, navigateTo }}>
       {children}
     </AccountNavigationContext.Provider>
   )

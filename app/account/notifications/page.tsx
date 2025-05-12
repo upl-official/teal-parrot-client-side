@@ -18,7 +18,7 @@ export default function NotificationsPage() {
   const [accountAlerts, setAccountAlerts] = useState(true)
 
   return (
-    <AnimatedContainer animation="fade" animationKey="notifications-page">
+    <AnimatedContainer animation="fade" key="notifications-page">
       <h1 className="text-2xl font-bold mb-6">Notification Preferences</h1>
 
       <Alert className="mb-6 bg-blue-50 border-blue-200">
@@ -39,7 +39,6 @@ export default function NotificationsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            layout
           >
             <div className="flex items-center space-x-4">
               <div className="p-2 bg-blue-100 rounded-full">
@@ -60,7 +59,6 @@ export default function NotificationsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            layout
           >
             <div className="flex items-center space-x-4">
               <div className="p-2 bg-red-100 rounded-full">
@@ -81,7 +79,6 @@ export default function NotificationsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            layout
           >
             <div className="flex items-center space-x-4">
               <div className="p-2 bg-green-100 rounded-full">
@@ -102,7 +99,6 @@ export default function NotificationsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            layout
           >
             <div className="flex items-center space-x-4">
               <div className="p-2 bg-purple-100 rounded-full">
@@ -123,7 +119,6 @@ export default function NotificationsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
-            layout
           >
             <div className="flex items-center space-x-4">
               <div className="p-2 bg-amber-100 rounded-full">

@@ -1,4 +1,5 @@
-import { PageLayout } from "@/components/page-layout"
+import { Header } from "@/components/header"
+import { Footer } from "@/components/footer"
 import { ContactForm } from "@/components/contact/contact-form"
 import { Mail, Phone, MapPin, Clock, MessageCircle, HelpCircle } from "lucide-react"
 import type { Metadata } from "next"
@@ -10,7 +11,8 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <PageLayout>
+    <main className="flex min-h-screen flex-col">
+      <Header />
       <div className="flex-grow">
         {/* Hero Section */}
         <div className="relative bg-gradient-to-r from-teal-600 to-teal-500 py-20 text-white">
@@ -178,6 +180,7 @@ export default function ContactPage() {
           </div>
         </div>
       </div>
-    </PageLayout>
+      <Footer />
+    </main>
   )
 }

@@ -33,19 +33,20 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
-    unoptimized: process.env.NODE_ENV === "development",
   },
-  // Disable App Router features that might be causing issues
   experimental: {
-    // Remove appDir: false to enable App Router
+    // Keep optimizeCss but ensure we have the dependency
   },
   typescript: {
+    // Dangerously allow production builds to successfully complete even if
+    // your project has type errors.
     ignoreBuildErrors: true,
   },
   eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  output: "standalone",
 }
 
 module.exports = nextConfig

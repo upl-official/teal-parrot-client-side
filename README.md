@@ -28,9 +28,9 @@ A modern e-commerce platform for silver jewelry, built with Next.js, TypeScript,
 ### Prerequisites
 
 - Node.js 18.x or higher
-- pnpm 8.x or higher
+- npm or yarn
 
-### Local Setup
+### Installation
 
 1. Clone the repository:
    \`\`\`bash
@@ -40,27 +40,27 @@ A modern e-commerce platform for silver jewelry, built with Next.js, TypeScript,
 
 2. Install dependencies:
    \`\`\`bash
-   pnpm install
+   npm install
+   # or
+   yarn install
    \`\`\`
-   This will automatically create a `.env.local` file from `.env.example` if it doesn't exist.
 
-3. Start the development server:
+3. Create a `.env.local` file in the root directory with the following variables:
+   \`\`\`
+   NEXT_PUBLIC_API_BASE_URL=https://backend-project-r734.onrender.com/api/v1
+   NEXT_PUBLIC_AUTH_ENABLED=true
+   NEXT_PUBLIC_ENABLE_WISHLIST=true
+   NEXT_PUBLIC_ENABLE_REVIEWS=true
+   \`\`\`
+
+4. Start the development server:
    \`\`\`bash
-   pnpm dev
+   npm run dev
+   # or
+   yarn dev
    \`\`\`
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
-
-### Environment Variables
-
-The following environment variables are required:
-
-- `NEXT_PUBLIC_API_BASE_URL`: URL for the backend API
-- `NEXT_PUBLIC_AUTH_ENABLED`: Enable/disable authentication features
-- `NEXT_PUBLIC_ENABLE_WISHLIST`: Enable/disable wishlist functionality
-- `NEXT_PUBLIC_ENABLE_REVIEWS`: Enable/disable product reviews
-
-Copy `.env.example` to `.env.local` and adjust the values as needed.
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
 ## Project Structure
 
@@ -84,49 +84,29 @@ teal-parrot-ecommerce/
 └── ...                   # Config files
 \`\`\`
 
+## API Integration
+
+The application integrates with a backend API for:
+- User authentication
+- Product catalog
+- Cart and wishlist management
+- Order processing
+
+The API base URL is configured in the `.env.local` file.
+
 ## Deployment
 
-### Vercel Deployment
-
-This project is optimized for deployment on Vercel:
-
-1. Connect your GitHub repository to Vercel
-2. Vercel will automatically detect Next.js and use the correct build settings
-3. Set the environment variables in the Vercel dashboard
-
-### Manual Deployment
-
-To build the project for production:
+This project can be deployed on Vercel or any other Next.js-compatible hosting platform.
 
 \`\`\`bash
-pnpm build
+npm run build
+# or
+yarn build
 \`\`\`
-
-To start the production server:
-
-\`\`\`bash
-pnpm start
-\`\`\`
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Missing ESLint**: If you encounter ESLint errors during build, install it with:
-   \`\`\`bash
-   pnpm add -D eslint
-   \`\`\`
-
-2. **Image Optimization**: If images don't appear correctly in development, try:
-   \`\`\`bash
-   pnpm dev --no-image-optimization
-   \`\`\`
-
-3. **Type Errors**: The project is configured to ignore TypeScript errors during build. To fix them properly, run:
-   \`\`\`bash
-   pnpm tsc
-   \`\`\`
 
 ## License
 
 [MIT](LICENSE)
+\`\`\`
+
+Let's create a postcss.config.js file:

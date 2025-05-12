@@ -80,7 +80,6 @@ export function AnimatedFormField({
                     "transition-all duration-200 border-gray-300 dark:border-gray-700",
                     "focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500",
                     isFocused && "border-teal-500 ring-2 ring-teal-500/20",
-                    isPassword && "pr-10", // Add padding to the right for the password toggle button
                   )}
                   onFocus={() => setIsFocused(true)}
                   onBlur={() => setIsFocused(false)}
@@ -88,16 +87,15 @@ export function AnimatedFormField({
                 />
 
                 {isPassword && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center w-5 h-5">
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 focus:outline-none"
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                    >
-                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </motion.button>
                 )}
               </div>
             </FormControl>

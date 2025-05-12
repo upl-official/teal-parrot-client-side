@@ -13,7 +13,7 @@ import {
   fetchCartItems,
   fetchWishlistItems,
 } from "@/lib/api"
-import type { Product, Category, Material, Grade, GroupedProduct } from "@/lib/types"
+import type { Product, Category, Material, Grade } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
@@ -44,6 +44,8 @@ import { Separator } from "@/components/ui/separator"
 import { addToCart, addToWishlist, getCurrentUserId } from "@/lib/api"
 import { useRouter } from "next/navigation"
 import { useInView } from "react-intersection-observer"
+
+// Add the import for ProductImage at the top of the file
 import { ProductImage } from "@/components/ui/product-image"
 
 // Add the placeholder image constant at the top of the file, after the imports
@@ -54,12 +56,10 @@ interface FilterSidebarProps {
   categories: Category[]
   materials: Material[]
   grades: Grade[]
-  sizes: string[]
   filters: {
     categories: string[]
     materials: string[]
     grades: string[]
-    sizes: string[]
     priceRange: { min: number; max: number }
     discount: boolean
     newArrivals: boolean
@@ -69,13 +69,11 @@ interface FilterSidebarProps {
     price: boolean
     materials: boolean
     grades: boolean
-    sizes: boolean
     discount: boolean
   }
   onCategoryChange: (categoryId: string) => void
   onMaterialChange: (materialId: string) => void
   onGradeChange: (gradeId: string) => void
-  onSizeChange: (size: string) => void
   onPriceChange: (value: number[]) => void
   onDiscountChange: (checked: boolean) => void
   onToggleFilterSection: (section: string) => void
@@ -87,13 +85,11 @@ const MemoizedFilterSidebar = memo(function FilterSidebar({
   categories,
   materials,
   grades,
-  sizes,
   filters,
   expandedFilters,
   onCategoryChange,
   onMaterialChange,
   onGradeChange,
-  onSizeChange,
   onPriceChange,
   onDiscountChange,
   onToggleFilterSection,
@@ -293,50 +289,6 @@ const MemoizedFilterSidebar = memo(function FilterSidebar({
         </AnimatePresence>
       </div>
 
-      {/* Sizes Filter - Add this new section */}
-      <div className="border rounded-lg p-4">
-        <div
-          className="flex justify-between items-center cursor-pointer"
-          onClick={() => onToggleFilterSection("sizes")}
-        >
-          <h3 className="text-lg font-semibold">Sizes</h3>
-          <motion.div animate={{ rotate: expandedFilters.sizes ? 180 : 0 }} transition={{ duration: 0.3 }}>
-            <ChevronDown size={18} />
-          </motion.div>
-        </div>
-
-        <AnimatePresence>
-          {expandedFilters.sizes && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-3 space-y-2 max-h-60 overflow-y-auto pr-2">
-                {sizes.length > 0 ? (
-                  sizes.map((size) => (
-                    <div key={size} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`size-${size}`}
-                        checked={filters.sizes.includes(size)}
-                        onCheckedChange={() => onSizeChange(size)}
-                      />
-                      <Label htmlFor={`size-${size}`} className="cursor-pointer text-sm flex-1">
-                        {size}
-                      </Label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 text-sm">No sizes available</p>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
       {/* Discount Filter */}
       <div className="border rounded-lg p-4">
         <div
@@ -384,7 +336,7 @@ const MemoizedFilterSidebar = memo(function FilterSidebar({
 
 // Find the ProductCard component and update it by replacing the current component with this enhanced version
 
-// Update the ProductCard component to handle size variants with hover effect
+// Memoized Product Card Component
 const ProductCard = memo(function ProductCard({
   product,
   viewMode,
@@ -393,35 +345,15 @@ const ProductCard = memo(function ProductCard({
   onAddToCart,
   onAddToWishlist,
 }: {
-  product: GroupedProduct
+  product: Product
   viewMode: "grid" | "list"
   userCartItems: string[]
   userWishlistItems: string[]
   onAddToCart: (product: Product, e: React.MouseEvent) => void
   onAddToWishlist: (product: Product, e: React.MouseEvent) => void
 }) {
-  const [selectedSize, setSelectedSize] = useState(product.selectedVariant.size || "")
-  const [showSizes, setShowSizes] = useState(false)
-  const router = useRouter()
-  const isInCart = userCartItems.includes(product.selectedVariant._id)
-  const isWishlisted = userWishlistItems.includes(product.selectedVariant._id)
-
-  // Find the variant that matches the selected size
-  const getVariantBySize = (size: string) => {
-    return product.variants.find((v) => v.size === size) || product.variants[0]
-  }
-
-  // Handle size change with redirection
-  const handleSizeChange = (size: string, e: React.MouseEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-
-    const variant = getVariantBySize(size)
-    setSelectedSize(size)
-
-    // Redirect to the product page with the specific variant ID
-    router.push(`/product/${variant._id}`)
-  }
+  const isInCart = userCartItems.includes(product._id)
+  const isWishlisted = userWishlistItems.includes(product._id)
 
   return (
     <motion.div
@@ -436,8 +368,6 @@ const ProductCard = memo(function ProductCard({
       }}
       transition={{ duration: 0.3 }}
       className={cn("group relative border rounded-lg overflow-hidden", viewMode === "list" ? "flex" : "")}
-      onMouseEnter={() => setShowSizes(true)}
-      onMouseLeave={() => setShowSizes(false)}
     >
       <div className="absolute top-2 right-2 z-10 flex flex-col gap-2">
         {/* Wishlist button */}
@@ -448,7 +378,7 @@ const ProductCard = memo(function ProductCard({
             "rounded-full p-1.5 shadow-sm",
             isWishlisted ? "bg-teal-500 text-white" : "bg-white/90 text-gray-700 hover:bg-gray-100",
           )}
-          onClick={(e) => onAddToWishlist(product.selectedVariant, e)}
+          onClick={(e) => onAddToWishlist(product, e)}
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
         >
           <Heart className={cn("h-4 w-4", isWishlisted ? "fill-white" : "")} />
@@ -462,66 +392,46 @@ const ProductCard = memo(function ProductCard({
             "rounded-full p-1.5 shadow-sm",
             isInCart ? "bg-teal-500 text-white" : "bg-white/90 text-gray-700 hover:bg-gray-100",
           )}
-          onClick={(e) => onAddToCart(product.selectedVariant, e)}
+          onClick={(e) => onAddToCart(product, e)}
           aria-label={isInCart ? "Remove from cart" : "Add to cart"}
         >
           <ShoppingBag className="h-4 w-4" />
         </motion.button>
       </div>
 
-      <Link href={`/product/${product.selectedVariant._id}`} className="w-full h-full">
+      <Link href={`/product/${product._id}`} className="w-full h-full">
         <div className={cn("relative overflow-hidden", viewMode === "list" ? "w-1/3" : "aspect-[3/4]")}>
           <ProductImage
-            src={product.selectedVariant.images[0] || "/placeholder.svg?height=400&width=300&query=silver jewelry"}
+            src={product.images[0] || "/placeholder.svg?height=400&width=300&query=silver jewelry"}
             alt={product.name}
             width={300}
             height={400}
             className="w-full h-full"
-            objectFit="cover"
+            objectFit="cover" // Ensure this is set to "cover"
           />
-          {product.selectedVariant.discountPercentage && product.selectedVariant.discountPercentage > 0 && (
+          {product.discountPercentage && product.discountPercentage > 0 && (
             <motion.div
               className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded-md text-sm font-semibold"
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 500, damping: 15 }}
             >
-              {product.selectedVariant.discountPercentage}% OFF
+              {product.discountPercentage}% OFF
             </motion.div>
           )}
 
-          {/* Size selector overlay - shown on hover */}
-          {product.availableSizes.length > 1 && (
-            <AnimatePresence>
-              {showSizes && (
-                <motion.div
-                  className="absolute bottom-0 left-0 right-0 bg-black/70 p-3"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <p className="text-xs text-white/90 mb-2 font-medium">Select Size:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {product.availableSizes.map((size) => (
-                      <button
-                        key={size}
-                        onClick={(e) => handleSizeChange(size, e)}
-                        className={cn(
-                          "min-w-[36px] h-7 px-2 text-xs font-medium rounded-md transition-all",
-                          selectedSize === size
-                            ? "bg-teal-500 text-white"
-                            : "bg-white/90 text-gray-800 hover:bg-teal-100",
-                        )}
-                      >
-                        {size}
-                      </button>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
+          {/* Keep hover action buttons for additional options in future */}
+          <div className="absolute bottom-0 left-0 right-0 overflow-hidden">
+            <motion.div
+              className="bg-black/60 p-2 flex justify-center space-x-2"
+              initial={{ y: "100%" }}
+              animate={{ y: "100%" }}
+              whileHover={{ y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <span className="text-xs text-white">Quick view</span>
+            </motion.div>
+          </div>
         </div>
 
         <div className={cn("p-4", viewMode === "list" ? "flex-1 flex flex-col justify-between" : "")}>
@@ -532,16 +442,6 @@ const ProductCard = memo(function ProductCard({
             )}
           </div>
 
-          {/* Show size indicator only when size is "Adjustable" */}
-          {selectedSize === "Adjustable" && (
-            <div className="mt-2">
-              <p className="text-xs text-gray-500">
-                Size: <span className="font-medium">{selectedSize}</span>
-                {viewMode === "list" && <span className="text-xs text-gray-400 ml-1">(more available)</span>}
-              </p>
-            </div>
-          )}
-
           <div className="mt-2">
             <motion.div
               className="flex items-center gap-2"
@@ -549,18 +449,17 @@ const ProductCard = memo(function ProductCard({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <p className="font-semibold text-gray-900">₹{product.selectedVariant.price}</p>
-              {product.selectedVariant.originalPrice &&
-                product.selectedVariant.originalPrice > product.selectedVariant.price && (
-                  <motion.span
-                    className="text-gray-500 line-through text-sm"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                  >
-                    ₹{product.selectedVariant.originalPrice}
-                  </motion.span>
-                )}
+              <p className="font-semibold text-gray-900">₹{product.price}</p>
+              {product.originalPrice && product.originalPrice > product.price && (
+                <motion.span
+                  className="text-gray-500 line-through text-sm"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  ₹{product.originalPrice}
+                </motion.span>
+              )}
             </motion.div>
 
             {/* Status indicators for list view */}
@@ -582,29 +481,6 @@ const ProductCard = memo(function ProductCard({
               </div>
             )}
 
-            {/* For list view, show size selector buttons always visible */}
-            {viewMode === "list" && product.availableSizes.length > 1 && (
-              <div className="mt-3">
-                <p className="text-xs text-gray-500 mb-1">Available Sizes:</p>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {product.availableSizes.map((size) => (
-                    <button
-                      key={size}
-                      onClick={(e) => handleSizeChange(size, e)}
-                      className={cn(
-                        "min-w-[36px] h-7 px-2 text-xs font-medium rounded-md border transition-all",
-                        selectedSize === size
-                          ? "border-teal-500 bg-teal-50 text-teal-700"
-                          : "border-gray-300 bg-white text-gray-700 hover:border-gray-400",
-                      )}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {viewMode === "list" && (
               <div className="mt-4 flex space-x-2">
                 <motion.button
@@ -616,7 +492,7 @@ const ProductCard = memo(function ProductCard({
                       ? "border border-teal-500 text-teal-500 hover:bg-teal-50"
                       : "bg-teal-500 text-white hover:bg-teal-600",
                   )}
-                  onClick={(e) => onAddToCart(product.selectedVariant, e)}
+                  onClick={(e) => onAddToCart(product, e)}
                 >
                   <ShoppingBag className="h-4 w-4 mr-1" />
                   {isInCart ? "In Cart" : "Add to Cart"}
@@ -628,7 +504,7 @@ const ProductCard = memo(function ProductCard({
                     "px-3 py-1 rounded-md border border-teal-500 flex items-center text-sm",
                     isWishlisted ? "bg-teal-50 text-teal-600" : "text-teal-500 hover:bg-teal-50",
                   )}
-                  onClick={(e) => onAddToWishlist(product.selectedVariant, e)}
+                  onClick={(e) => onAddToWishlist(product, e)}
                 >
                   <Heart className={cn("h-4 w-4 mr-1", isWishlisted ? "fill-teal-500" : "")} />
                   {isWishlisted ? "In Wishlist" : "Wishlist"}
@@ -662,7 +538,6 @@ const ProductCard = memo(function ProductCard({
 })
 
 // Memoized Product Grid Component
-// Update the ProductGrid component to handle grouped products
 const ProductGrid = memo(function ProductGrid({
   products,
   viewMode,
@@ -671,7 +546,7 @@ const ProductGrid = memo(function ProductGrid({
   onAddToCart,
   onAddToWishlist,
 }: {
-  products: GroupedProduct[]
+  products: Product[]
   viewMode: "grid" | "list"
   userCartItems: string[]
   userWishlistItems: string[]
@@ -703,14 +578,12 @@ const ProductGrid = memo(function ProductGrid({
 })
 
 // Memoized Active Filters Component
-// Update the ActiveFilters component to include sizes
 const ActiveFilters = memo(function ActiveFilters({
   searchQuery,
   filters,
   categories,
   materials,
   grades,
-  sizes,
   activeFiltersCount,
   onRemoveFilter,
   onResetFilters,
@@ -720,13 +593,11 @@ const ActiveFilters = memo(function ActiveFilters({
     categories: string[]
     materials: string[]
     grades: string[]
-    sizes: string[]
     discount: boolean
   }
   categories: Category[]
   materials: Material[]
   grades: Grade[]
-  sizes: string[]
   activeFiltersCount: number
   onRemoveFilter: (type: string, value?: string) => void
   onResetFilters: () => void
@@ -806,17 +677,6 @@ const ActiveFilters = memo(function ActiveFilters({
         </Badge>
       ))}
 
-      {/* Add size filters */}
-      {filters.sizes.map((size) => (
-        <Badge key={size} variant="secondary" className="px-3 py-1 flex items-center gap-1">
-          Size: {size}
-          <Button variant="ghost" size="sm" className="h-4 w-4 p-0 ml-1" onClick={() => onRemoveFilter("sizes", size)}>
-            <X className="h-3 w-3" />
-            <span className="sr-only">Remove filter</span>
-          </Button>
-        </Badge>
-      ))}
-
       {filters.discount && (
         <Badge variant="secondary" className="px-3 py-1 flex items-center gap-1">
           Discounted Items
@@ -837,17 +697,12 @@ const ActiveFilters = memo(function ActiveFilters({
 })
 
 // Main ProductCollection Component
-// Update the main ProductCollection component
 export function ProductCollection() {
-  // Update the main ProductCollection component
-  // Removed duplicate export declaration
   const [products, setProducts] = useState<Product[]>([])
-  const [groupedProducts, setGroupedProducts] = useState<GroupedProduct[]>([])
-  const [filteredProducts, setFilteredProducts] = useState<GroupedProduct[]>([])
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [materials, setMaterials] = useState<Material[]>([])
   const [grades, setGrades] = useState<Grade[]>([])
-  const [sizes, setSizes] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState("featured")
@@ -860,7 +715,6 @@ export function ProductCollection() {
     price: true,
     materials: true,
     grades: true,
-    sizes: true,
     discount: true,
   })
   const [activeFiltersCount, setActiveFiltersCount] = useState(0)
@@ -877,7 +731,6 @@ export function ProductCollection() {
     categories: [] as string[],
     materials: [] as string[],
     grades: [] as string[],
-    sizes: [] as string[],
     priceRange: { min: 0, max: 10000 },
     discount: false,
     newArrivals: false,
@@ -890,47 +743,6 @@ export function ProductCollection() {
     rootMargin: "100px", // Add rootMargin to start observation earlier
   })
 
-  // Group products by name and category
-  const groupProductsByNameAndCategory = useCallback((products: Product[]): GroupedProduct[] => {
-    const productGroups: Record<string, Product[]> = {}
-
-    // Group products by name and category
-    products.forEach((product) => {
-      const key = `${product.name}-${product.category}`
-      if (!productGroups[key]) {
-        productGroups[key] = []
-      }
-      productGroups[key].push(product)
-    })
-
-    // Convert groups to GroupedProduct objects
-    return Object.values(productGroups).map((group) => {
-      // Extract all available sizes
-      const availableSizes = Array.from(new Set(group.map((p) => p.size || ""))).filter(Boolean)
-
-      // Use the first product as the base
-      const baseProduct = group[0]
-
-      return {
-        ...baseProduct,
-        variants: group,
-        selectedVariant: baseProduct,
-        availableSizes: availableSizes.length > 0 ? availableSizes : [baseProduct.size || ""],
-      }
-    })
-  }, [])
-
-  // Extract all unique sizes from products
-  const extractSizes = useCallback((products: Product[]): string[] => {
-    const sizeSet = new Set<string>()
-    products.forEach((product) => {
-      if (product.size) {
-        sizeSet.add(product.size)
-      }
-    })
-    return Array.from(sizeSet).sort()
-  }, [])
-
   // Initial data fetch
   useEffect(() => {
     const fetchData = async () => {
@@ -941,7 +753,6 @@ export function ProductCollection() {
         const urlParams = new URLSearchParams(window.location.search)
         const urlCategoryId = urlParams.get("category")
         const urlSearchQuery = urlParams.get("search")
-        const urlSize = urlParams.get("size")
 
         // If there's a search query in the URL, set it in the state
         if (urlSearchQuery) {
@@ -958,16 +769,8 @@ export function ProductCollection() {
 
         setProducts(productsData)
 
-        // Extract all unique sizes
-        const allSizes = extractSizes(productsData)
-        setSizes(allSizes)
-
-        // Group products by name and category
-        const grouped = groupProductsByNameAndCategory(productsData)
-        setGroupedProducts(grouped)
-
         // Apply initial filters based on URL parameters
-        let filteredByParams = [...grouped]
+        let filteredByParams = [...productsData]
 
         // If category was specified in URL, filter by category
         if (urlCategoryId) {
@@ -981,19 +784,6 @@ export function ProductCollection() {
             const categoryName = product.category
             const matchingCategory = categoriesData.find((c) => c.name === categoryName)
             return matchingCategory && matchingCategory._id === urlCategoryId
-          })
-        }
-
-        // If size was specified in URL, filter by size
-        if (urlSize) {
-          setFilters((prev) => ({
-            ...prev,
-            sizes: [urlSize],
-          }))
-
-          // Filter products by size
-          filteredByParams = filteredByParams.filter((product) => {
-            return product.availableSizes.includes(urlSize)
           })
         }
 
@@ -1032,7 +822,7 @@ export function ProductCollection() {
     }
 
     fetchData()
-  }, [groupProductsByNameAndCategory, extractSizes])
+  }, [])
 
   // Fetch user cart and wishlist items
   useEffect(() => {
@@ -1055,6 +845,8 @@ export function ProductCollection() {
 
     fetchUserItems()
   }, [])
+
+  // Inside the component, add this new useEffect hook after the other useEffect hooks
 
   // Listen for search events when already on the collection page
   useEffect(() => {
@@ -1085,7 +877,7 @@ export function ProductCollection() {
     // Use a debounced approach to prevent rapid state changes
     const filterTimeout = setTimeout(() => {
       // Apply filtering logic
-      let result = [...groupedProducts]
+      let result = [...products]
 
       // Apply search filter
       if (searchQuery.trim()) {
@@ -1124,14 +916,6 @@ export function ProductCollection() {
         })
       }
 
-      // Apply size filter
-      if (filters.sizes.length > 0) {
-        result = result.filter((product) => {
-          // Check if any of the product's available sizes match the selected sizes
-          return product.availableSizes.some((size) => filters.sizes.includes(size))
-        })
-      }
-
       // Apply price range filter
       result = result.filter(
         (product) => product.price >= filters.priceRange.min && product.price <= filters.priceRange.max,
@@ -1147,7 +931,6 @@ export function ProductCollection() {
       if (filters.categories.length > 0) count++
       if (filters.materials.length > 0) count++
       if (filters.grades.length > 0) count++
-      if (filters.sizes.length > 0) count++
       if (filters.discount) count++
       if (filters.newArrivals) count++
       if (searchQuery.trim()) count++
@@ -1185,7 +968,7 @@ export function ProductCollection() {
     }, 250) // Debounce time
 
     return () => clearTimeout(filterTimeout)
-  }, [filters, sortBy, searchQuery, groupedProducts, categories, materials, grades, loading])
+  }, [filters, sortBy, searchQuery, products, categories, materials, grades, loading])
 
   // Apply filters when dependencies change
   useEffect(() => {
@@ -1242,33 +1025,6 @@ export function ProductCollection() {
     })
   }, [])
 
-  // Add size change handler
-  const handleSizeChange = useCallback((size: string) => {
-    setFilters((prev) => {
-      const sizes = prev.sizes.includes(size) ? prev.sizes.filter((s) => s !== size) : [...prev.sizes, size]
-
-      // Update URL to reflect the current size filter state
-      const urlParams = new URLSearchParams(window.location.search)
-
-      if (sizes.length === 0) {
-        // If no sizes selected, remove the size parameter
-        urlParams.delete("size")
-      } else if (sizes.length === 1) {
-        // If only one size, set it as the URL parameter
-        urlParams.set("size", sizes[0])
-      } else {
-        // For multiple sizes, use a comma-separated list
-        urlParams.set("size", sizes.join(","))
-      }
-
-      // Update the URL without refreshing the page
-      const newUrl = `${window.location.pathname}${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
-      window.history.pushState({}, "", newUrl)
-
-      return { ...prev, sizes }
-    })
-  }, [])
-
   const handlePriceChange = useCallback((value: number[]) => {
     setFilters((prev) => ({
       ...prev,
@@ -1301,7 +1057,6 @@ export function ProductCollection() {
       categories: [],
       materials: [],
       grades: [],
-      sizes: [],
       priceRange: { min: minPrice, max: maxPrice },
       discount: false,
       newArrivals: false,
@@ -1347,21 +1102,6 @@ export function ProductCollection() {
         newFilters.materials = prev.materials.filter((id) => id !== value)
       } else if (type === "grades" && value) {
         newFilters.grades = prev.grades.filter((id) => id !== value)
-      } else if (type === "sizes" && value) {
-        newFilters.sizes = prev.sizes.filter((size) => size !== value)
-
-        // Update URL when removing size filter
-        const urlParams = new URLSearchParams(window.location.search)
-        if (newFilters.sizes.length === 0) {
-          urlParams.delete("size")
-        } else if (newFilters.sizes.length === 1) {
-          urlParams.set("size", newFilters.sizes[0])
-        } else {
-          urlParams.set("size", newFilters.sizes.join(","))
-        }
-
-        const newUrl = `${window.location.pathname}${urlParams.toString() ? `?${urlParams.toString()}` : ""}`
-        window.history.pushState({}, "", newUrl)
       } else if (type === "discount") {
         newFilters.discount = false
       } else if (type === "newArrivals") {
@@ -1706,13 +1446,11 @@ export function ProductCollection() {
                     categories={categories}
                     materials={materials}
                     grades={grades}
-                    sizes={sizes}
                     filters={filters}
                     expandedFilters={expandedFilters}
                     onCategoryChange={handleCategoryChange}
                     onMaterialChange={handleMaterialChange}
                     onGradeChange={handleGradeChange}
-                    onSizeChange={handleSizeChange}
                     onPriceChange={handlePriceChange}
                     onDiscountChange={handleDiscountChange}
                     onToggleFilterSection={toggleFilterSection}
@@ -1795,7 +1533,6 @@ export function ProductCollection() {
         categories={categories}
         materials={materials}
         grades={grades}
-        sizes={sizes}
         activeFiltersCount={activeFiltersCount}
         onRemoveFilter={removeFilter}
         onResetFilters={resetFilters}
@@ -1809,13 +1546,11 @@ export function ProductCollection() {
               categories={categories}
               materials={materials}
               grades={grades}
-              sizes={sizes}
               filters={filters}
               expandedFilters={expandedFilters}
               onCategoryChange={handleCategoryChange}
               onMaterialChange={handleMaterialChange}
               onGradeChange={handleGradeChange}
-              onSizeChange={handleSizeChange}
               onPriceChange={handlePriceChange}
               onDiscountChange={handleDiscountChange}
               onToggleFilterSection={toggleFilterSection}

@@ -6,7 +6,7 @@ import { AnimatedContainer } from "@/components/animated/animated-container"
 
 export default function OrdersPage() {
   return (
-    <AnimatedContainer animation="fade" animationKey="orders-page">
+    <AnimatedContainer animation="fade" key="orders-page">
       <h1 className="text-2xl font-bold mb-6">My Orders</h1>
 
       <Card>

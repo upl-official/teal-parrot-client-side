@@ -1,4 +1,3 @@
-import { PageLayout } from "@/components/page-layout"
 import GuidePageClient from "./GuidePageClient"
 import type { Metadata } from "next"
 
@@ -8,9 +7,5 @@ export const metadata: Metadata = {
 }
 
 export default function GuidePage() {
-  return (
-    <PageLayout>
-      <GuidePageClient />
-    </PageLayout>
-  )
+  return <GuidePageClient />
 }
