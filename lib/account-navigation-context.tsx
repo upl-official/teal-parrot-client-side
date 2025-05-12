@@ -1,43 +1,71 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
+import type React from "react"
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
 type AccountNavigationContextType = {
-  isNavigating: boolean
   navigateTo: (path: string) => void
+  isNavigating: boolean
+  activeSection: string
+  isInitialLoad: boolean
 }
 
 const AccountNavigationContext = createContext<AccountNavigationContextType | undefined>(undefined)
 
-export function AccountNavigationProvider({ children }: { children: ReactNode }) {
-  const [isNavigating, setIsNavigating] = useState(false)
+export function AccountNavigationProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const [isNavigating, setIsNavigating] = useState(false)
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const previousPath = useRef<string | null>(null)
+  const navigationTimer = useRef<NodeJS.Timeout | null>(null)
+
+  // Extract the active section from the pathname
+  const activeSection = pathname.split("/").pop() || "dashboard"
+
+  useEffect(() => {
+    // After initial render, set isInitialLoad to false
+    const timer = setTimeout(() => {
+      setIsInitialLoad(false)
+    }, 800)
+
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Reset navigation state after pathname changes
+  useEffect(() => {
+    if (previousPath.current && previousPath.current !== pathname) {
+      // Small delay to ensure content is loaded
+      navigationTimer.current = setTimeout(() => {
+        setIsNavigating(false)
+      }, 300)
+    }
+    previousPath.current = pathname
+
+    return () => {
+      if (navigationTimer.current) {
+        clearTimeout(navigationTimer.current)
+      }
+    }
+  }, [pathname])
 
   const navigateTo = useCallback(
     (path: string) => {
-      if (pathname === path) return
+      if (pathname !== path) {
+        setIsNavigating(true)
 
-      setIsNavigating(true)
-
-      // Use setTimeout to simulate a loading state
-      // This gives the UI time to show a loading indicator
-      setTimeout(() => {
-        router.push(path)
-
-        // Reset the navigating state after a short delay
-        // This allows the animation to complete
+        // Small delay before navigation to ensure UI state updates
         setTimeout(() => {
-          setIsNavigating(false)
-        }, 300)
-      }, 100)
+          router.push(path)
+        }, 50)
+      }
     },
     [router, pathname],
   )
 
   return (
-    <AccountNavigationContext.Provider value={{ isNavigating, navigateTo }}>
+    <AccountNavigationContext.Provider value={{ navigateTo, isNavigating, activeSection, isInitialLoad }}>
       {children}
     </AccountNavigationContext.Provider>
   )

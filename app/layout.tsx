@@ -3,7 +3,8 @@ import type { Metadata } from "next"
 import { Inter, Montserrat, Antic_Didone } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
-import { LayoutWrapper } from "./layout-wrapper"
+import { TransitionProvider } from "@/lib/transition-context"
+import { ScrollToTop } from "@/components/scroll-to-top"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" })
@@ -28,7 +29,10 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${montserrat.variable} ${anticDidone.variable}`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <LayoutWrapper>{children}</LayoutWrapper>
+          <TransitionProvider>
+            {children}
+            <ScrollToTop />
+          </TransitionProvider>
         </ThemeProvider>
       </body>
     </html>

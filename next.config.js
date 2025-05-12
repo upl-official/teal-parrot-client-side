@@ -33,6 +33,7 @@ const nextConfig = {
         pathname: "/**",
       },
     ],
+    unoptimized: process.env.NODE_ENV === "development",
   },
   experimental: {
     // Keep optimizeCss but ensure we have the dependency
@@ -47,6 +48,8 @@ const nextConfig = {
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
+  // Ensure output is compatible with Vercel deployment
+  output: "standalone",
 }
 
 module.exports = nextConfig
