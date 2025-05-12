@@ -11,8 +11,9 @@ export default async function LoginPage({
 }: {
   searchParams: { [key: string]: string | string[] | undefined }
 }) {
-  // Get the redirect URL from query parameters
-  const redirectUrl = searchParams.redirect ? String(searchParams.redirect) : "/account"
+  // Get the redirect URL from query parameters - properly awaited
+  const redirect = searchParams.redirect
+  const redirectUrl = redirect ? String(redirect) : "/account"
 
   return <LoginForm redirectUrl={redirectUrl} />
 }

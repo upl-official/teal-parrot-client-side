@@ -47,9 +47,10 @@ export function PageTransition({ children }: PageTransitionProps) {
     return <>{children}</>
   }
 
+  // Each child needs a unique key for AnimatePresence to work properly
   return (
     <motion.div
-      key={pathname}
+      key={pathname || "page"}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
