@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, Suspense } from "react"
 import { usePathname } from "next/navigation"
 import { AnimatePresence } from "framer-motion"
 
@@ -14,20 +14,10 @@ type TransitionContextType = {
 
 const TransitionContext = createContext<TransitionContextType | undefined>(undefined)
 
-export function TransitionProvider({ children }: { children: React.ReactNode }) {
+// Create a client-side only component for pathname
+function TransitionHandler({ children }: { children: React.ReactNode }) {
   const [isTransitioning, setIsTransitioning] = useState(false)
-  const [isFirstMount, setIsFirstMount] = useState(true)
   const pathname = usePathname()
-
-  useEffect(() => {
-    // Set first mount to false after initial render
-    if (isFirstMount) {
-      const timer = setTimeout(() => {
-        setIsFirstMount(false)
-      }, 500)
-      return () => clearTimeout(timer)
-    }
-  }, [isFirstMount])
 
   useEffect(() => {
     // Handle route change
@@ -57,7 +47,13 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
     setIsTransitioning(false)
   }
 
-  const handleExitComplete = () => {
+  return (
+    <AnimatePresence mode="wait" onExitComplete={handleExitComplete}>
+      {children}
+    </AnimatePresence>
+  )
+
+  function handleExitComplete() {
     // Ensure scroll is reset after exit animation completes
     if (typeof window !== "undefined") {
       window.scrollTo({
@@ -67,19 +63,36 @@ export function TransitionProvider({ children }: { children: React.ReactNode }) 
       })
     }
   }
+}
+
+export function TransitionProvider({ children }: { children: React.ReactNode }) {
+  const [isFirstMount, setIsFirstMount] = useState(true)
+
+  useEffect(() => {
+    // Set first mount to false after initial render
+    if (isFirstMount) {
+      const timer = setTimeout(() => {
+        setIsFirstMount(false)
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [isFirstMount])
+
+  const startTransition = () => {}
+  const completeTransition = () => {}
 
   return (
     <TransitionContext.Provider
       value={{
-        isTransitioning,
+        isTransitioning: false,
         startTransition,
         completeTransition,
         isFirstMount,
       }}
     >
-      <AnimatePresence mode="wait" onExitComplete={handleExitComplete}>
-        {children}
-      </AnimatePresence>
+      <Suspense fallback={<div>Loading...</div>}>
+        <TransitionHandler>{children}</TransitionHandler>
+      </Suspense>
     </TransitionContext.Provider>
   )
 }

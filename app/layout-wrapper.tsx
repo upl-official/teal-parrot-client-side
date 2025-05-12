@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { PageTransition } from "@/components/animated/page-transition"
@@ -12,8 +12,21 @@ interface LayoutWrapperProps {
   children: React.ReactNode
 }
 
-export function LayoutWrapper({ children }: LayoutWrapperProps) {
+// Create a client-side only header component with pathname
+function ClientHeader() {
   const pathname = usePathname()
+
+  // Check if the current route is for authentication pages
+  const isAuthPage = pathname === "/login" || pathname === "/signup"
+
+  if (isAuthPage) {
+    return null
+  }
+
+  return <Header />
+}
+
+export function LayoutWrapper({ children }: LayoutWrapperProps) {
   const { isFirstMount } = useTransition()
 
   // Reset scroll position on route change
@@ -26,9 +39,10 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
         behavior: "instant",
       })
     }
-  }, [pathname, isFirstMount])
+  }, [isFirstMount])
 
-  // Check if the current route is for authentication pages
+  // Check if the current route is for authentication pages using client component
+  const pathname = usePathname()
   const isAuthPage = pathname === "/login" || pathname === "/signup"
 
   // Don't include header/footer on auth pages
@@ -38,9 +52,13 @@ export function LayoutWrapper({ children }: LayoutWrapperProps) {
 
   return (
     <>
-      <Header />
+      <Suspense fallback={<div className="h-[85px] md:h-[125px] bg-teal-500"></div>}>
+        <ClientHeader />
+      </Suspense>
       <main>
-        <PageTransition>{children}</PageTransition>
+        <Suspense fallback={<div className="min-h-[50vh] flex items-center justify-center">Loading...</div>}>
+          <PageTransition>{children}</PageTransition>
+        </Suspense>
       </main>
       <Footer />
     </>

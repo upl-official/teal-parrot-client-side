@@ -37,7 +37,7 @@ const nextConfig = {
   },
   // Disable App Router features that might be causing issues
   experimental: {
-    appDir: false, // Disable App Router completely for this build
+    // Remove appDir: false to enable App Router
   },
   typescript: {
     ignoreBuildErrors: true,
