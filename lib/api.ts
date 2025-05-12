@@ -144,6 +144,28 @@ export async function fetchSimilarProducts(category?: string): Promise<Product[]
   return products.slice(0, 8)
 }
 
+// Add this function to fetch sizes
+export async function fetchSizes(): Promise<string[]> {
+  try {
+    const response = await apiRequest<{ success: boolean; data: string[] }>("/product/sizes")
+    return response.data
+  } catch (error) {
+    console.error("Error fetching sizes:", error)
+
+    // If the API doesn't support size fetching yet, extract sizes from products
+    const products = await fetchProducts()
+    const sizeSet = new Set<string>()
+
+    products.forEach((product) => {
+      if (product.size) {
+        sizeSet.add(product.size)
+      }
+    })
+
+    return Array.from(sizeSet).sort()
+  }
+}
+
 // Category APIs
 export async function fetchCategories(): Promise<Category[]> {
   const response = await apiRequest<{ success: boolean; data: Category[] }>("/category/cat-list")
