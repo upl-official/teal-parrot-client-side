@@ -9,7 +9,7 @@ export default function BrandPage() {
       {/* Hero Section */}
       <section className="relative h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-teal-900/90 to-teal-500/70 z-10"></div>
-        <Image src="/silver-elegance.png" alt="Teal Parrot Jewelry" fill className="object-cover" priority />
+        <Image src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/brand-images/teal-parrot-brand+(1).webp" alt="Teal Parrot Jewelry" fill className="object-cover" priority />
         <div className="relative z-20 container mx-auto h-full flex flex-col justify-center px-4">
           <AnimatedContainer animation="slide-up" delay={0.2}>
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-4">Our Brand Story</h1>

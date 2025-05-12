@@ -75,7 +75,7 @@ export function GiftSuggestionSection() {
             viewport={{ once: true, margin: "-100px" }}
             className="order-1 md:order-2 relative h-[400px] rounded-lg overflow-hidden shadow-xl"
           >
-            <Image src="/silver-ring-gift.jpg" alt="Silver ring as a gift" fill className="object-cover" />
+            <Image src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/landing-images/teal-parrot+(2).webp" alt="Silver ring as a gift" fill className="object-cover" />
             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/20"></div>
           </motion.div>
         </div>

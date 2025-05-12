@@ -62,7 +62,7 @@ export function QuoteCtaSection() {
             className="relative h-[400px] md:h-[500px] rounded-lg overflow-hidden"
           >
             <Image
-              src="/silver-moonlight-reflection.jpg"
+              src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/landing-images/teal-parrot+(3).webp"
               alt="Silver jewelry reflecting moonlight"
               fill
               className="object-cover"

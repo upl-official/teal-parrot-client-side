@@ -90,7 +90,7 @@ export function LoginForm({ redirectUrl = "/account" }: { redirectUrl?: string }
             form={form}
             name="password"
             label="Password"
-            placeholder="••••••••"
+            placeholder="Password"
             type="password"
             index={1}
             required

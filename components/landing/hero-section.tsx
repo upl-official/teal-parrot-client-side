@@ -12,19 +12,19 @@ export function HeroSection() {
 
   const slides = [
     {
-      image: "/elegant-silver-display.png",
+      image: "https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/hero-images/teal-parrot-hero+(4).webp",
       heading: "Timeless Elegance in Silver",
       subheading: "Handcrafted jewelry that tells your unique story",
       cta: "Explore Collection",
     },
     {
-      image: "/silver-nose-ring-collection.png",
+      image: "https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/hero-images/teal-parrot-hero+(1).webp",
       heading: "Discover Our Latest Collection",
       subheading: "Exquisite designs that blend tradition with contemporary style",
       cta: "Shop New Arrivals",
     },
     {
-      image: "/intricate-silver-collection.png",
+      image: "https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/hero-images/teal-parrot-hero+(2).webp",
       heading: "Artisan Craftsmanship",
       subheading: "Each piece meticulously crafted with attention to detail",
       cta: "Our Story",

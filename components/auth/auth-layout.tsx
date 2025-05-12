@@ -99,7 +99,7 @@ export function AuthLayout({ children, title, subtitle, isLoginPage = false }: A
 
       {/* Right side - Form */}
       <motion.div
-        className={cn("flex-1 flex flex-col justify-center items-center p-6 md:p-12", "bg-white dark:bg-gray-900")}
+        className={cn("relative flex-1 flex flex-col justify-center items-center p-6 md:p-12", "bg-white dark:bg-gray-900")}
         initial="hidden"
         animate="visible"
         variants={slideInFromRight}

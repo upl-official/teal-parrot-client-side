@@ -72,11 +72,11 @@ export function SizeGuide() {
 
                   <div className="flex justify-center">
                     <Image
-                      src="/measuring-ring-size.png"
+                      src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/guide-images/teal-parrot-guide-ring-1.webp"
                       alt="How to measure ring size"
                       width={300}
                       height={300}
-                      className="rounded-lg"
+                      className="rounded-lg object-cover"
                     />
                   </div>
                 </div>
@@ -219,11 +219,11 @@ export function SizeGuide() {
 
                   <div className="flex justify-center">
                     <Image
-                      src="/necklace-length-guide.png"
+                      src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/guide-images/teal-parrot-guide-necklace.webp"
                       alt="Necklace length guide"
                       width={300}
                       height={400}
-                      className="rounded-lg"
+                      className="rounded-lg object-cover"
                     />
                   </div>
                 </div>
@@ -278,11 +278,11 @@ export function SizeGuide() {
 
                   <div className="flex justify-center">
                     <Image
-                      src="/wrist-measurement-guide.png"
+                      src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/guide-images/teal-parrot-guide-bracelet.webp"
                       alt="Bracelet sizing guide"
                       width={300}
                       height={300}
-                      className="rounded-lg"
+                      className="rounded-lg object-cover"
                     />
                   </div>
                 </div>
@@ -337,11 +337,11 @@ export function SizeGuide() {
 
                   <div className="flex justify-center">
                     <Image
-                      src="/nose-ring-size-guide.png"
+                      src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/guide-images/teal-parrot-guide-nose.webp"
                       alt="Nose ring sizing guide"
                       width={300}
                       height={300}
-                      className="rounded-lg"
+                      className="rounded-lg object-cover"
                     />
                   </div>
                 </div>

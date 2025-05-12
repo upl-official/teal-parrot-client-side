@@ -13,7 +13,7 @@ export function PromoBanner() {
     <section
       className="py-24 bg-cover bg-center relative"
       style={{
-        backgroundImage: "url('/intricate-silver-collection.png')",
+        backgroundImage: "url('https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/landing-images/teal-parrot+(4).webp')",
       }}
       ref={ref}
     >
