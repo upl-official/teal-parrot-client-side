@@ -35,23 +35,16 @@ const nextConfig = {
     ],
     unoptimized: process.env.NODE_ENV === "development",
   },
-  // Disable static generation for not-found pages
+  // Disable App Router features that might be causing issues
   experimental: {
-    // Disable static generation for not-found pages
-    skipTrailingSlashRedirect: true,
-    skipMiddlewareUrlNormalize: true,
+    appDir: false, // Disable App Router completely for this build
   },
   typescript: {
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
     ignoreBuildErrors: true,
   },
   eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  // Ensure output is compatible with Vercel deployment
   output: "standalone",
 }
 
