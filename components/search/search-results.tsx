@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Search, Loader2 } from "lucide-react"
@@ -16,25 +16,42 @@ interface SearchResultsProps {
   onResultClick: () => void
 }
 
-export function SearchResults({ results, isLoading, searchQuery, onResultClick }: SearchResultsProps) {
+function SearchResults({ results, isLoading, searchQuery, onResultClick }: SearchResultsProps) {
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const resultRefs = useRef<(HTMLAnchorElement | null)[]>([])
   const router = useRouter()
 
+  // Group products by name and category to avoid duplicates with different sizes
+  const groupedResults = useMemo(() => {
+    const productMap = new Map<string, Product>()
+
+    results.forEach((product) => {
+      const key = `${product.name}-${product.category}`
+
+      // If this is the first product with this name+category, add it to the map
+      if (!productMap.has(key)) {
+        productMap.set(key, product)
+      }
+    })
+
+    // Convert map values back to array
+    return Array.from(productMap.values())
+  }, [results])
+
   // Reset selected index when results change
   useEffect(() => {
     setSelectedIndex(-1)
-    resultRefs.current = resultRefs.current.slice(0, results.length)
-  }, [results])
+    resultRefs.current = resultRefs.current.slice(0, groupedResults.length)
+  }, [groupedResults])
 
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!results.length) return
+      if (!groupedResults.length) return
 
       if (e.key === "ArrowDown") {
         e.preventDefault()
-        setSelectedIndex((prev) => (prev < results.length - 1 ? prev + 1 : prev))
+        setSelectedIndex((prev) => (prev < groupedResults.length - 1 ? prev + 1 : prev))
       } else if (e.key === "ArrowUp") {
         e.preventDefault()
         setSelectedIndex((prev) => (prev > 0 ? prev - 1 : prev))
@@ -46,7 +63,7 @@ export function SearchResults({ results, isLoading, searchQuery, onResultClick }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [results.length, selectedIndex])
+  }, [groupedResults.length, selectedIndex])
 
   // Scroll selected item into view
   useEffect(() => {
@@ -89,11 +106,11 @@ export function SearchResults({ results, isLoading, searchQuery, onResultClick }
     <div className="fixed mt-10 top-[125px] md:top-[165px] left-0 right-0 bg-white shadow-lg rounded-b-lg z-[100] mx-4 md:mx-auto md:max-w-3xl lg:max-w-4xl max-h-[60vh] overflow-y-auto">
       <div className="p-2">
         <h3 className="text-sm font-medium text-gray-500 px-2 py-1">
-          {results.length} {results.length === 1 ? "result" : "results"} found
+          {groupedResults.length} {groupedResults.length === 1 ? "result" : "results"} found
         </h3>
 
         <div className="grid grid-cols-1 gap-2">
-          {results.map((product, index) => (
+          {groupedResults.map((product, index) => (
             <Link
               href={`/product/${product._id}`}
               key={product._id}
@@ -143,7 +160,7 @@ export function SearchResults({ results, isLoading, searchQuery, onResultClick }
             if (window.location.pathname === "/collection") {
               // Dispatch the custom event
               const searchEvent = new CustomEvent("search-query-updated", {
-                detail: { query: searchQuery },
+                detail: { query: searchQuery, totalResults: results.length },
               })
               window.dispatchEvent(searchEvent)
 
@@ -158,9 +175,11 @@ export function SearchResults({ results, isLoading, searchQuery, onResultClick }
             onResultClick()
           }}
         >
-          View all results
+          View all {results.length} results
         </Button>
       </div>
     </div>
   )
 }
+
+export { SearchResults }

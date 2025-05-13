@@ -123,9 +123,8 @@ export default function ContactPage() {
                 <div className="h-[300px] overflow-hidden rounded-lg bg-gray-200">
                   <iframe
                     src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3945.859861826859!2d76.9698123!3d8.512984600000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3b05bbeda235d6b9%3A0x4537ea80c34b50b6!2sAcotoman%20India%20Private%20Limited!5e0!3m2!1sen!2sin!4v1745422849972!5m2!1sen!2sin"
-                    width="100%"
-                    height="100%"
-                    style={{ border: 0 }}
+                    className="w-full h-full object-cover"
+                    style={{ border: 0, display: "block" }}
                     allowFullScreen
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"

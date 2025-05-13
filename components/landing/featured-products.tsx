@@ -32,8 +32,8 @@ export function FeaturedProducts() {
     "67254422d6e125906ef60c21",
     "67254f7b7b8e3ef7d0fcea1b",
     "681a2e47e25bfb5f536c9f77",
-    "681dbe056675de8385b64fac",
-    "681dbe086675de8385b64fb2",
+    "681e23961938fba6f3c9ce19",
+    "681a3ada3f3f74389fd115ea",
   ]
 
   const groupProductsByNameAndCategory = useCallback((products: Product[]) => {
@@ -234,7 +234,7 @@ export function FeaturedProducts() {
                           />
                           {selectedProduct.discountPercentage && selectedProduct.discountPercentage > 0 && (
                             <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-semibold">
-                              {selectedProduct.discountPercentage}% OFF
+                              {Math.round(selectedProduct.discountPercentage)}% OFF
                             </div>
                           )}
                         </div>

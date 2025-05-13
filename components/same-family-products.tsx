@@ -3,17 +3,16 @@
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { fetchSimilarProducts } from "@/lib/api"
+import { fetchProducts } from "@/lib/api"
 import type { Product } from "@/lib/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-// Add the import for ProductImage at the top of the file
 import { ProductImage } from "@/components/ui/product-image"
 
-// Add the placeholder image constant at the top of the file, after the imports
+// Add the placeholder image constant
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
 
-export function SimilarProducts({ category }: { category?: string }) {
+export function SameFamilyProducts({ productName, currentCategory }: { productName: string; currentCategory: string }) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,18 +21,25 @@ export function SimilarProducts({ category }: { category?: string }) {
   useEffect(() => {
     const getProducts = async () => {
       try {
-        const data = await fetchSimilarProducts(category)
-        setProducts(data)
+        // Fetch all products
+        const allProducts = await fetchProducts()
+
+        // Filter products that have the same name but different category
+        const sameFamilyProducts = allProducts.filter(
+          (product) => product.name === productName && product.category !== currentCategory,
+        )
+
+        setProducts(sameFamilyProducts)
       } catch (error) {
-        console.error("Error fetching similar products:", error)
-        setError("Failed to load similar products. Please try again later.")
+        console.error("Error fetching same family products:", error)
+        setError("Failed to load related products. Please try again later.")
       } finally {
         setLoading(false)
       }
     }
 
     getProducts()
-  }, [category])
+  }, [productName, currentCategory])
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
@@ -47,12 +53,17 @@ export function SimilarProducts({ category }: { category?: string }) {
     }
   }
 
+  // Don't render anything if there are no same family products
+  if (!loading && products.length === 0) {
+    return null
+  }
+
   if (loading) {
     return (
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4 relative">
           <div className="flex justify-between items-end border-b-2 border-teal-500 pb-2 mb-8">
-            <h3 className="text-2xl font-bold text-teal-500">Similar Products</h3>
+            <h3 className="text-2xl font-bold text-teal-500">From the Same Family</h3>
           </div>
           <div className="flex justify-center items-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500"></div>
@@ -67,7 +78,7 @@ export function SimilarProducts({ category }: { category?: string }) {
       <section className="py-16 bg-white">
         <div className="container mx-auto px-4 relative">
           <div className="flex justify-between items-end border-b-2 border-teal-500 pb-2 mb-8">
-            <h3 className="text-2xl font-bold text-teal-500">Similar Products</h3>
+            <h3 className="text-2xl font-bold text-teal-500">From the Same Family</h3>
           </div>
           <Alert variant="destructive" className="mb-6">
             <AlertCircle className="h-4 w-4" />
@@ -79,33 +90,11 @@ export function SimilarProducts({ category }: { category?: string }) {
     )
   }
 
-  if (products.length === 0) {
-    return (
-      <section className="py-16 bg-white">
-        <div className="container mx-auto px-4 relative">
-          <div className="flex justify-between items-end border-b-2 border-teal-500 pb-2 mb-8">
-            <h3 className="text-2xl font-bold text-teal-500">Similar Products</h3>
-            <Link
-              href="/collection"
-              className="text-teal-500 border border-teal-500 px-4 py-2 rounded hover:bg-teal-500 hover:text-white transition-colors"
-            >
-              View All
-            </Link>
-          </div>
-          <div className="text-center py-12">
-            <p className="text-gray-500">No similar products available at the moment.</p>
-            <p className="text-gray-500 mt-2">Check out our full collection for more options.</p>
-          </div>
-        </div>
-      </section>
-    )
-  }
-
   return (
     <section className="py-16 bg-white">
       <div className="container mx-auto px-4 relative">
         <div className="flex justify-between items-end border-b-2 border-teal-500 pb-2 mb-8">
-          <h3 className="text-2xl font-bold text-teal-500">Similar Products</h3>
+          <h3 className="text-2xl font-bold text-teal-500">From the Same Family</h3>
           <Link
             href="/collection"
             className="text-teal-500 border border-teal-500 px-4 py-2 rounded hover:bg-teal-500 hover:text-white transition-colors"
@@ -137,7 +126,7 @@ export function SimilarProducts({ category }: { category?: string }) {
                     width={250}
                     height={350}
                     className="w-[250px] h-[350px] transition-transform duration-300 group-hover:scale-105"
-                    objectFit="cover" // Ensure this is set to "cover"
+                    objectFit="cover"
                   />
                   {product.discountPercentage && (
                     <div className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-md text-sm font-semibold">
@@ -152,6 +141,7 @@ export function SimilarProducts({ category }: { category?: string }) {
                     <span className="text-gray-500 line-through text-sm">₹{product.originalPrice}</span>
                   )}
                 </div>
+                <div className="mt-1 text-sm text-teal-600">{product.category}</div>
               </div>
             </Link>
           ))}

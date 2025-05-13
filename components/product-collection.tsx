@@ -486,7 +486,7 @@ const ProductCard = memo(function ProductCard({
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 500, damping: 15 }}
             >
-              {product.selectedVariant.discountPercentage}% OFF
+              {Math.round(product.selectedVariant.discountPercentage)}% OFF
             </motion.div>
           )}
 

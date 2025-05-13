@@ -27,7 +27,7 @@ export function AuthLayout({ children, title, subtitle, isLoginPage = false }: A
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left side - Decorative */}
       <motion.div
-        className="hidden md:flex md:w-1/2 bg-gradient-to-br from-teal-500 to-teal-700 relative overflow-hidden"
+        className="hidden justify-center md:flex md:w-1/2 bg-gradient-to-br from-teal-500 to-teal-700 relative overflow-hidden"
         initial="hidden"
         animate="visible"
         variants={slideInFromLeft}

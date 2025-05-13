@@ -2,6 +2,7 @@ import Image from "next/image"
 import { PageLayout } from "@/components/page-layout"
 import { AnimatedContainer } from "@/components/animated/animated-container"
 import { AnimatedImage } from "@/components/animated/animated-image"
+import { BrandCollections } from "@/components/brand/brand-collections"
 
 export default function BrandPage() {
   return (
@@ -9,7 +10,13 @@ export default function BrandPage() {
       {/* Hero Section */}
       <section className="relative h-[60vh] overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-r from-teal-900/90 to-teal-500/70 z-10"></div>
-        <Image src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/brand-images/teal-parrot-brand+(1).webp" alt="Teal Parrot Jewelry" fill className="object-cover" priority />
+        <Image
+          src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/brand-images/teal-parrot-brand+(1).webp"
+          alt="Teal Parrot Jewelry"
+          fill
+          className="object-cover"
+          priority
+        />
         <div className="relative z-20 container mx-auto h-full flex flex-col justify-center px-4">
           <AnimatedContainer animation="slide-up" delay={0.2}>
             <h1 className="text-5xl md:text-7xl font-bold text-white mb-4">Our Brand Story</h1>
@@ -244,6 +251,9 @@ export default function BrandPage() {
         </div>
       </section>
 
+      {/* Our Collection Section - Replacing the Gallery/Creations Section */}
+      <BrandCollections />
+
       {/* Promise Section */}
       <section className="py-20 bg-white">
         <div className="container mx-auto px-4">
@@ -272,81 +282,6 @@ export default function BrandPage() {
               </AnimatedContainer>
             </div>
           </AnimatedContainer>
-        </div>
-      </section>
-
-      {/* Gallery Section */}
-      <section className="py-20 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <AnimatedContainer animation="fade" delay={0.2}>
-            <h2 className="text-3xl font-semibold mb-12 text-center text-teal-500">Our Creations</h2>
-          </AnimatedContainer>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <AnimatedContainer animation="scale" delay={0.3} className="col-span-2">
-              <div className="relative h-80 overflow-hidden rounded-lg shadow-lg group">
-                <Image
-                  src="https://teal-parrot.s3.eu-north-1.amazonaws.com/products/0233b2af-a166-450e-9989-0e355ea8c451.jpg"
-                  alt="Silver Necklace"
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                  <div className="p-4">
-                    <h3 className="text-white text-xl font-medium">Elegant Necklaces</h3>
-                  </div>
-                </div>
-              </div>
-            </AnimatedContainer>
-
-            <AnimatedContainer animation="scale" delay={0.4}>
-              <div className="relative h-80 overflow-hidden rounded-lg shadow-lg group">
-                <Image
-                  src="/intricate-silver-earrings.png"
-                  alt="Silver Earrings"
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                  <div className="p-4">
-                    <h3 className="text-white text-xl font-medium">Earrings</h3>
-                  </div>
-                </div>
-              </div>
-            </AnimatedContainer>
-
-            <AnimatedContainer animation="scale" delay={0.5}>
-              <div className="relative h-80 overflow-hidden rounded-lg shadow-lg group">
-                <Image
-                  src="/silver-cuff-detail.png"
-                  alt="Silver Bracelet"
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                  <div className="p-4">
-                    <h3 className="text-white text-xl font-medium">Bracelets</h3>
-                  </div>
-                </div>
-              </div>
-            </AnimatedContainer>
-
-            <AnimatedContainer animation="scale" delay={0.6} className="col-span-2">
-              <div className="relative h-80 overflow-hidden rounded-lg shadow-lg group">
-                <Image
-                  src="/placeholder.svg?key=rkt8q"
-                  alt="Silver Rings"
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end">
-                  <div className="p-4">
-                    <h3 className="text-white text-xl font-medium">Stunning Rings</h3>
-                  </div>
-                </div>
-              </div>
-            </AnimatedContainer>
-          </div>
         </div>
       </section>
     </PageLayout>

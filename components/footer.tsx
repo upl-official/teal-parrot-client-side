@@ -72,28 +72,23 @@ export function Footer() {
             <h3 className="text-lg font-bold mb-4">Community</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="https://www.linkedin.com/company/" className="hover:text-gray-200">
+                <Link href="https://www.instagram.com/teal_parrot" className="hover:text-gray-200">
+                  Instagram
+                </Link>
+              </li>
+              <li>
+                <Link href="https://www.facebook.com/profile.php?id=61571249081806" className="hover:text-gray-200">
+                  Facebook
+                </Link>
+              </li>
+              <li>
+                <Link href="#" className="hover:text-gray-200">
                   LinkedIn
                 </Link>
               </li>
               <li>
-                <Link href="https://youtube.com/" className="hover:text-gray-200">
+                <Link href="#" className="hover:text-gray-200">
                   YouTube
-                </Link>
-              </li>
-              <li>
-                <Link href="https://in.pinterest.com/" className="hover:text-gray-200">
-                  Pinterest
-                </Link>
-              </li>
-              <li>
-                <Link href="https://www.reddit.com/user/" className="hover:text-gray-200">
-                  Reddit
-                </Link>
-              </li>
-              <li>
-                <Link href="http://blogspot.com/" className="hover:text-gray-200">
-                  Blogger
                 </Link>
               </li>
             </ul>
@@ -153,13 +148,13 @@ export function Footer() {
           <Link href="mailto:hello@tealparrot.com" className="hover:text-gray-200">
             <Mail className="w-6 h-6" />
           </Link>
-          <Link href="https://www.linkedin.com/" className="hover:text-gray-200">
+          <Link href="#" className="hover:text-gray-200">
             <Linkedin className="w-6 h-6" />
           </Link>
-          <Link href="https://www.instagram.com/" className="hover:text-gray-200">
+          <Link href="https://www.instagram.com/teal_parrot" className="hover:text-gray-200">
             <Instagram className="w-6 h-6" />
           </Link>
-          <Link href="https://www.facebook.com/" className="hover:text-gray-200">
+          <Link href="https://www.facebook.com/profile.php?id=61571249081806" className="hover:text-gray-200">
             <Facebook className="w-6 h-6" />
           </Link>
         </div>
