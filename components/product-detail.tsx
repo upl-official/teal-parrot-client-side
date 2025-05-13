@@ -13,7 +13,6 @@ import {
   Truck,
   Shield,
   RotateCcw,
-  Star,
   Plus,
   Minus,
   HeartIcon as HeartFilled,
@@ -41,14 +40,6 @@ import { Badge } from "@/components/ui/badge"
 import { motion, AnimatePresence } from "framer-motion"
 import { redirectToLogin } from "@/lib/utils"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 
 // Default placeholder image path
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
@@ -57,30 +48,82 @@ const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
 function formatDescription(description: string): React.ReactNode[] {
   if (!description) return [<p key="empty">No description available for this product.</p>]
 
-  // First replace \r\n with <br> for consistent processing
-  const normalizedDescription = description.replace(/\r\n/g, "<br>")
+  try {
+    // First replace \r\n with <br> for consistent processing
+    const normalizedDescription = description.replace(/\r\n/g, "<br>")
 
-  // Split by <br> tags to handle line breaks
-  const paragraphs = normalizedDescription.split("<br>")
+    // Split by <br> tags to handle line breaks
+    const paragraphs = normalizedDescription.split("<br>")
 
-  const result: React.ReactNode[] = []
-  let inList = false
-  let listItems: React.ReactNode[] = []
+    const result: React.ReactNode[] = []
+    let inList = false
+    let listItems: React.ReactNode[] = []
 
-  paragraphs.forEach((paragraph, index) => {
-    // Skip empty paragraphs but render a line break
-    if (!paragraph.trim()) {
-      // If we're not in a list, add a line break
-      if (!inList) {
-        result.push(<br key={`br-${index}`} />)
+    paragraphs.forEach((paragraph, index) => {
+      // Skip empty paragraphs but render a line break
+      if (!paragraph.trim()) {
+        // If we're not in a list, add a line break
+        if (!inList) {
+          result.push(<br key={`br-${index}`} />)
+        }
+        return
       }
-      return
-    }
 
-    // Check if this paragraph contains a heading tag
-    if (paragraph.includes("<h>") && paragraph.includes("</h>")) {
-      // If we were in a list, close it before adding the heading
-      if (inList && listItems.length > 0) {
+      // Check if this paragraph contains a heading tag
+      if (paragraph.includes("<h>") && paragraph.includes("</h>")) {
+        // If we were in a list, close it before adding the heading
+        if (inList && listItems.length > 0) {
+          result.push(
+            <ul key={`list-${index}`} className="ml-5 my-3 space-y-1">
+              {listItems}
+            </ul>,
+          )
+          listItems = []
+          inList = false
+        }
+
+        // Extract the heading text
+        const headingMatch = paragraph.match(/<h>(.*?)<\/h>/)
+        if (headingMatch) {
+          const headingText = headingMatch[1]
+          const parts = paragraph.split(/<h>.*?<\/h>/)
+
+          // Add text before heading if it exists
+          if (parts[0].trim()) {
+            result.push(
+              <p key={`pre-heading-${index}`} className="mb-2">
+                {formatInlineStyles(parts[0])}
+              </p>,
+            )
+          }
+
+          // Add the heading with proper spacing
+          result.push(
+            <h3 key={`heading-${index}`} className="text-lg font-semibold my-3">
+              {formatInlineStyles(headingText)}
+            </h3>,
+          )
+
+          // Add text after heading if it exists
+          if (parts[1] && parts[1].trim()) {
+            result.push(
+              <p key={`post-heading-${index}`} className="mb-2">
+                {formatInlineStyles(parts[1])}
+              </p>,
+            )
+          }
+        }
+        return
+      }
+
+      // Check if this is a list item
+      if (paragraph.trim().startsWith("=>")) {
+        const listItemText = paragraph.trim().substring(2).trim()
+        listItems.push(<li key={`list-item-${index}`}>{formatInlineStyles(listItemText)}</li>)
+        inList = true
+        return
+      } else if (inList) {
+        // If we were in a list but this paragraph is not a list item, close the list
         result.push(
           <ul key={`list-${index}`} className="ml-5 my-3 space-y-1">
             {listItems}
@@ -90,153 +133,111 @@ function formatDescription(description: string): React.ReactNode[] {
         inList = false
       }
 
-      // Extract the heading text
-      const headingMatch = paragraph.match(/<h>(.*?)<\/h>/)
-      if (headingMatch) {
-        const headingText = headingMatch[1]
-        const parts = paragraph.split(/<h>.*?<\/h>/)
-
-        // Add text before heading if it exists
-        if (parts[0].trim()) {
-          result.push(
-            <p key={`pre-heading-${index}`} className="mb-2">
-              {formatInlineStyles(parts[0])}
-            </p>,
-          )
-        }
-
-        // Add the heading with proper spacing
-        result.push(
-          <h3 key={`heading-${index}`} className="text-lg font-semibold my-3">
-            {formatInlineStyles(headingText)}
-          </h3>,
-        )
-
-        // Add text after heading if it exists
-        if (parts[1] && parts[1].trim()) {
-          result.push(
-            <p key={`post-heading-${index}`} className="mb-2">
-              {formatInlineStyles(parts[1])}
-            </p>,
-          )
-        }
-      }
-      return
-    }
-
-    // Check if this is a list item
-    if (paragraph.trim().startsWith("=>")) {
-      const listItemText = paragraph.trim().substring(2).trim()
-      listItems.push(<li key={`list-item-${index}`}>{formatInlineStyles(listItemText)}</li>)
-      inList = true
-      return
-    } else if (inList) {
-      // If we were in a list but this paragraph is not a list item, close the list
+      // Regular paragraph with inline formatting
       result.push(
-        <ul key={`list-${index}`} className="ml-5 my-3 space-y-1">
+        <p key={`p-${index}`} className="mb-2">
+          {formatInlineStyles(paragraph)}
+        </p>,
+      )
+    })
+
+    // If we ended with an open list, close it
+    if (inList && listItems.length > 0) {
+      result.push(
+        <ul key="final-list" className="ml-5 my-3 space-y-1">
           {listItems}
         </ul>,
       )
-      listItems = []
-      inList = false
     }
 
-    // Regular paragraph with inline formatting
-    result.push(
-      <p key={`p-${index}`} className="mb-2">
-        {formatInlineStyles(paragraph)}
-      </p>,
-    )
-  })
-
-  // If we ended with an open list, close it
-  if (inList && listItems.length > 0) {
-    result.push(
-      <ul key="final-list" className="ml-5 my-3 space-y-1">
-        {listItems}
-      </ul>,
-    )
+    return result
+  } catch (error) {
+    console.error("Error formatting description:", error)
+    return [<p key="error">Description formatting error. Please contact support.</p>]
   }
-
-  return result
 }
 
 // Helper function to handle inline text formatting
 function formatInlineStyles(text: string): React.ReactNode[] {
-  let result: React.ReactNode[] = []
-  let currentText = text
-  let lastIndex = 0
+  try {
+    let result: React.ReactNode[] = []
+    let currentText = text
+    let lastIndex = 0
 
-  // Handle bold text (*text*)
-  const boldRegex = /\*(.*?)\*/g
-  let boldMatch
-  while ((boldMatch = boldRegex.exec(currentText)) !== null) {
-    if (boldMatch.index > lastIndex) {
-      result.push(currentText.substring(lastIndex, boldMatch.index))
+    // Handle bold text (*text*)
+    const boldRegex = /\*(.*?)\*/g
+    let boldMatch
+    while ((boldMatch = boldRegex.exec(currentText)) !== null) {
+      if (boldMatch.index > lastIndex) {
+        result.push(currentText.substring(lastIndex, boldMatch.index))
+      }
+      result.push(<strong key={`bold-${boldMatch.index}`}>{boldMatch[1]}</strong>)
+      lastIndex = boldMatch.index + boldMatch[0].length
     }
-    result.push(<strong key={`bold-${boldMatch.index}`}>{boldMatch[1]}</strong>)
-    lastIndex = boldMatch.index + boldMatch[0].length
-  }
 
-  // Add remaining text after processing bold
-  if (lastIndex < currentText.length) {
-    currentText = currentText.substring(lastIndex)
+    // Add remaining text after processing bold
+    if (lastIndex < currentText.length) {
+      currentText = currentText.substring(lastIndex)
+      lastIndex = 0
+    } else {
+      return result
+    }
+
+    // Handle italic text (_text_)
+    const italicRegex = /_(.*?)_/g
+    let tempResult: React.ReactNode[] = []
+    let italicMatch
+
+    while ((italicMatch = italicRegex.exec(currentText)) !== null) {
+      if (italicMatch.index > lastIndex) {
+        tempResult.push(currentText.substring(lastIndex, italicMatch.index))
+      }
+      tempResult.push(<em key={`italic-${italicMatch.index}`}>{italicMatch[1]}</em>)
+      lastIndex = italicMatch.index + italicMatch[0].length
+    }
+
+    // Add remaining text after processing italic
+    if (lastIndex < currentText.length) {
+      tempResult.push(currentText.substring(lastIndex))
+    }
+
+    // If we processed any italic text, update result and currentText
+    if (tempResult.length > 0) {
+      result = [...result, ...tempResult]
+      return result
+    }
+
+    // Handle strikethrough text (~text~)
+    const strikeRegex = /~(.*?)~/g
+    let strikeMatch
+    tempResult = []
     lastIndex = 0
-  } else {
-    return result
-  }
 
-  // Handle italic text (_text_)
-  const italicRegex = /_(.*?)_/g
-  let tempResult: React.ReactNode[] = []
-  let italicMatch
-
-  while ((italicMatch = italicRegex.exec(currentText)) !== null) {
-    if (italicMatch.index > lastIndex) {
-      tempResult.push(currentText.substring(lastIndex, italicMatch.index))
+    while ((strikeMatch = strikeRegex.exec(currentText)) !== null) {
+      if (strikeMatch.index > lastIndex) {
+        tempResult.push(currentText.substring(lastIndex, strikeMatch.index))
+      }
+      tempResult.push(<del key={`strike-${strikeMatch.index}`}>{strikeMatch[1]}</del>)
+      lastIndex = strikeMatch.index + strikeMatch[0].length
     }
-    tempResult.push(<em key={`italic-${italicMatch.index}`}>{italicMatch[1]}</em>)
-    lastIndex = italicMatch.index + italicMatch[0].length
-  }
 
-  // Add remaining text after processing italic
-  if (lastIndex < currentText.length) {
-    tempResult.push(currentText.substring(lastIndex))
-  }
-
-  // If we processed any italic text, update result and currentText
-  if (tempResult.length > 0) {
-    result = [...result, ...tempResult]
-    return result
-  }
-
-  // Handle strikethrough text (~text~)
-  const strikeRegex = /~(.*?)~/g
-  let strikeMatch
-  tempResult = []
-  lastIndex = 0
-
-  while ((strikeMatch = strikeRegex.exec(currentText)) !== null) {
-    if (strikeMatch.index > lastIndex) {
-      tempResult.push(currentText.substring(lastIndex, strikeMatch.index))
+    // Add remaining text after processing strikethrough
+    if (lastIndex < currentText.length) {
+      tempResult.push(currentText.substring(lastIndex))
     }
-    tempResult.push(<del key={`strike-${strikeMatch.index}`}>{strikeMatch[1]}</del>)
-    lastIndex = strikeMatch.index + strikeMatch[0].length
-  }
 
-  // Add remaining text after processing strikethrough
-  if (lastIndex < currentText.length) {
-    tempResult.push(currentText.substring(lastIndex))
-  }
+    // If we processed any strikethrough text, update result
+    if (tempResult.length > 0) {
+      result = [...result, ...tempResult]
+      return result
+    }
 
-  // If we processed any strikethrough text, update result
-  if (tempResult.length > 0) {
-    result = [...result, ...tempResult]
-    return result
+    // If no formatting was applied, return the original text
+    return [currentText]
+  } catch (error) {
+    console.error("Error formatting inline styles:", error)
+    return [text] // Return original text if there's an error
   }
-
-  // If no formatting was applied, return the original text
-  return [currentText]
 }
 
 interface SizeVariant {
@@ -258,7 +259,6 @@ export function ProductDetail({ productId }: { productId: string }) {
   const [failedImages, setFailedImages] = useState<Record<string, boolean>>({})
   const [sizeVariants, setSizeVariants] = useState<SizeVariant[]>([])
   const [selectedSizeVariant, setSelectedSizeVariant] = useState<SizeVariant | null>(null)
-  const [showSizeGuide, setShowSizeGuide] = useState(false)
   const [isUpdatingVariant, setIsUpdatingVariant] = useState(false)
 
   // Add or update these zoom-related states
@@ -282,65 +282,85 @@ export function ProductDetail({ productId }: { productId: string }) {
         setLoading(true)
         // Fetch the main product
         const mainProduct = await fetchProductById(productId)
+
+        if (!mainProduct) {
+          setError("Product not found")
+          setLoading(false)
+          return
+        }
+
         setProduct(mainProduct)
 
+        // Set default main image
         if (mainProduct.images && mainProduct.images.length > 0) {
           setMainImage(mainProduct.images[0])
+        } else {
+          setMainImage(PLACEHOLDER_IMAGE)
         }
 
         // Initialize the selected size variant with the current product
         const currentVariant: SizeVariant = {
           id: mainProduct._id,
           size: mainProduct.size || "Default",
-          price: mainProduct.price,
+          price: mainProduct.price || 0,
           originalPrice: mainProduct.originalPrice,
           stock: mainProduct.stock || 0,
-          images: mainProduct.images,
+          images: mainProduct.images || [],
         }
         setSelectedSizeVariant(currentVariant)
 
-        // Now fetch all products to find variants with the same name
-        const allProducts = await fetchProducts()
+        try {
+          // Now fetch all products to find variants with the same name
+          const allProducts = await fetchProducts()
 
-        // Find variants with the same name and category but different sizes
-        const variants = allProducts
-          .filter(
-            (p) =>
-              p.name === mainProduct.name && p.category === mainProduct.category && p._id !== mainProduct._id && p.size, // Only include products that have a size
-          )
-          .map((p) => ({
-            id: p._id,
-            size: p.size || "Default",
-            price: p.price,
-            originalPrice: p.originalPrice,
-            stock: p.stock || 0,
-            images: p.images,
-          }))
+          // Find variants with the same name and category but different sizes
+          const variants = allProducts
+            .filter(
+              (p) =>
+                p.name === mainProduct.name &&
+                p.category === mainProduct.category &&
+                p._id !== mainProduct._id &&
+                p.size, // Only include products that have a size
+            )
+            .map((p) => ({
+              id: p._id,
+              size: p.size || "Default",
+              price: p.price || 0,
+              originalPrice: p.originalPrice,
+              stock: p.stock || 0,
+              images: p.images || [],
+            }))
 
-        // Add the current product to the variants list
-        const allVariants = [currentVariant, ...variants].sort((a, b) => {
-          // Try to sort numerically if possible
-          const aSize = Number.parseFloat(a.size)
-          const bSize = Number.parseFloat(b.size)
-          if (!isNaN(aSize) && !isNaN(bSize)) {
-            return aSize - bSize
-          }
-          // Fall back to string comparison
-          return a.size.localeCompare(b.size)
-        })
+          // Add the current product to the variants list
+          const allVariants = [currentVariant, ...variants].sort((a, b) => {
+            // Try to sort numerically if possible
+            const aSize = Number.parseFloat(a.size)
+            const bSize = Number.parseFloat(b.size)
+            if (!isNaN(aSize) && !isNaN(bSize)) {
+              return aSize - bSize
+            }
+            // Fall back to string comparison
+            return a.size.localeCompare(b.size)
+          })
 
-        setSizeVariants(allVariants)
+          setSizeVariants(allVariants)
+        } catch (variantsError) {
+          console.error("Error fetching variants:", variantsError)
+          // Still set the current variant even if we can't fetch others
+          setSizeVariants([currentVariant])
+        }
 
         // Check if product is in wishlist
-        const userId = getCurrentUserId()
-        if (userId) {
-          try {
+        try {
+          const userId = getCurrentUserId()
+          if (userId) {
             const wishlistItems = await fetchWishlistItems(userId)
             const isInList = wishlistItems.some((item) => item.product._id === productId)
             setIsInWishlist(isInList)
-          } catch (error) {
-            console.error("Error checking wishlist status:", error)
           }
+        } catch (wishlistError) {
+          console.error("Error checking wishlist status:", wishlistError)
+          // Non-critical error, continue without setting wishlist status
         }
       } catch (error) {
         console.error("Error fetching product:", error)
@@ -356,58 +376,72 @@ export function ProductDetail({ productId }: { productId: string }) {
   // Handle size variant selection
   const handleSizeSelect = useCallback(
     async (variant: SizeVariant) => {
-      if (selectedSizeVariant?.id === variant.id) return
+      if (!variant || selectedSizeVariant?.id === variant.id) return
 
       setIsUpdatingVariant(true)
       setSelectedSizeVariant(variant)
 
-      // Update URL with the selected variant ID without navigating
-      const url = new URL(window.location.href)
-      url.searchParams.set("variant", variant.id)
-      window.history.pushState({ path: url.toString() }, "", url.toString())
+      try {
+        // Update URL with the selected variant ID without navigating
+        if (typeof window !== "undefined") {
+          const url = new URL(window.location.href)
+          url.searchParams.set("variant", variant.id)
+          window.history.pushState({ path: url.toString() }, "", url.toString())
+        }
 
-      // If this is a different product ID than the current one, fetch its details
-      if (variant.id !== productId) {
-        try {
-          const variantProduct = await fetchProductById(variant.id)
+        // If this is a different product ID than the current one, fetch its details
+        if (variant.id !== productId) {
+          try {
+            const variantProduct = await fetchProductById(variant.id)
 
-          // Update product details
-          setProduct(variantProduct)
+            if (variantProduct) {
+              // Update product details
+              setProduct(variantProduct)
 
-          // Update main image if there are variant-specific images
-          if (variantProduct.images && variantProduct.images.length > 0) {
-            setMainImage(variantProduct.images[0])
-          }
+              // Update main image if there are variant-specific images
+              if (variantProduct.images && variantProduct.images.length > 0) {
+                setMainImage(variantProduct.images[0])
+              }
 
-          // Check if this variant is in the wishlist
-          const userId = getCurrentUserId()
-          if (userId) {
-            try {
-              const wishlistItems = await fetchWishlistItems(userId)
-              const isInList = wishlistItems.some((item) => item.product._id === variant.id)
-              setIsInWishlist(isInList)
-            } catch (error) {
-              console.error("Error checking wishlist status:", error)
+              // Check if this variant is in the wishlist
+              const userId = getCurrentUserId()
+              if (userId) {
+                try {
+                  const wishlistItems = await fetchWishlistItems(userId)
+                  const isInList = wishlistItems.some((item) => item.product._id === variant.id)
+                  setIsInWishlist(isInList)
+                } catch (error) {
+                  console.error("Error checking wishlist status:", error)
+                }
+              }
             }
+          } catch (error) {
+            console.error("Error fetching variant product:", error)
+            toast({
+              title: "Error",
+              description: "Failed to load product variant details. Please try again.",
+              variant: "destructive",
+            })
           }
-        } catch (error) {
-          console.error("Error fetching variant product:", error)
-          toast({
-            title: "Error",
-            description: "Failed to load product variant details. Please try again.",
-            variant: "destructive",
-          })
+        } else {
+          // If it's the same product ID, just update the image if needed
+          if (variant.images && variant.images.length > 0) {
+            setMainImage(variant.images[0])
+          }
         }
-      } else {
-        // If it's the same product ID, just update the image if needed
-        if (variant.images && variant.images.length > 0) {
-          setMainImage(variant.images[0])
-        }
-      }
 
-      // Reset quantity to 1 when changing variants
-      setQuantity(1)
-      setIsUpdatingVariant(false)
+        // Reset quantity to 1 when changing variants
+        setQuantity(1)
+      } catch (error) {
+        console.error("Error during variant selection:", error)
+        toast({
+          title: "Error",
+          description: "Failed to select variant. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsUpdatingVariant(false)
+      }
     },
     [productId, selectedSizeVariant?.id, toast],
   )
@@ -477,7 +511,7 @@ export function ProductDetail({ productId }: { productId: string }) {
   }
 
   const getImageSrc = (imageUrl: string) => {
-    if (failedImages[imageUrl]) {
+    if (!imageUrl || failedImages[imageUrl]) {
       return PLACEHOLDER_IMAGE
     }
     return imageUrl
@@ -644,7 +678,9 @@ export function ProductDetail({ productId }: { productId: string }) {
 
   // Calculate discount percentage if not provided
   const discountPercentage =
-    selectedSizeVariant.originalPrice && selectedSizeVariant.price < selectedSizeVariant.originalPrice
+    selectedSizeVariant.originalPrice &&
+    selectedSizeVariant.price < selectedSizeVariant.originalPrice &&
+    selectedSizeVariant.originalPrice > 0
       ? Math.round(
           ((selectedSizeVariant.originalPrice - selectedSizeVariant.price) / selectedSizeVariant.originalPrice) * 100,
         )
@@ -695,10 +731,11 @@ export function ProductDetail({ productId }: { productId: string }) {
                     <Image
                       src={
                         getImageSrc(mainImage) ||
-                        (selectedSizeVariant.images && selectedSizeVariant.images[0]) ||
-                        PLACEHOLDER_IMAGE
+                        (selectedSizeVariant.images && selectedSizeVariant.images.length > 0
+                          ? getImageSrc(selectedSizeVariant.images[0])
+                          : PLACEHOLDER_IMAGE)
                       }
-                      alt={product.name}
+                      alt={product.name || "Product Image"}
                       width={600}
                       height={600}
                       className="object-cover w-full h-full"
@@ -727,7 +764,12 @@ export function ProductDetail({ productId }: { productId: string }) {
                     <div
                       className="absolute inset-0 bg-no-repeat"
                       style={{
-                        backgroundImage: `url(${getImageSrc(mainImage) || (selectedSizeVariant.images && selectedSizeVariant.images[0]) || PLACEHOLDER_IMAGE})`,
+                        backgroundImage: `url(${
+                          getImageSrc(mainImage) ||
+                          (selectedSizeVariant.images && selectedSizeVariant.images.length > 0
+                            ? getImageSrc(selectedSizeVariant.images[0])
+                            : PLACEHOLDER_IMAGE)
+                        })`,
                         backgroundPosition: `${zoomPosition.x}% ${zoomPosition.y}%`,
                         backgroundSize: `${zoomLevel * 100}%`,
                         backgroundRepeat: "no-repeat",
@@ -802,10 +844,11 @@ export function ProductDetail({ productId }: { productId: string }) {
                       <Image
                         src={
                           getImageSrc(mainImage) ||
-                          (selectedSizeVariant.images && selectedSizeVariant.images[0]) ||
-                          PLACEHOLDER_IMAGE
+                          (selectedSizeVariant.images && selectedSizeVariant.images.length > 0
+                            ? getImageSrc(selectedSizeVariant.images[0])
+                            : PLACEHOLDER_IMAGE)
                         }
-                        alt={product.name}
+                        alt={product.name || "Product Image"}
                         width={1200}
                         height={1200}
                         className="max-w-none object-contain max-h-full"
@@ -817,38 +860,40 @@ export function ProductDetail({ productId }: { productId: string }) {
             </AnimatePresence>
 
             {/* Thumbnail Gallery */}
-            <motion.div
-              className="grid grid-cols-4 gap-4"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              {selectedSizeVariant.images?.map((image, index) => (
-                <motion.div
-                  key={index}
-                  className={`aspect-square overflow-hidden rounded-lg cursor-pointer transition-all duration-300 ${
-                    mainImage === image
-                      ? "border-2 ring-2 ring-teal-500 ring-opacity-50 transform scale-105"
-                      : "border border-gray-200 hover:border-teal-300 hover:shadow-md"
-                  }`}
-                  onClick={() => {
-                    setMainImage(image)
-                    setIsZoomed(false) // Reset zoom state when changing images
-                  }}
-                  whileHover={{ scale: mainImage === image ? 1.05 : 1.03 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Image
-                    src={getImageSrc(image) || PLACEHOLDER_IMAGE}
-                    alt={`${product.name} view ${index + 1}`}
-                    width={150}
-                    height={150}
-                    className={`object-cover w-full h-full transition-opacity duration-300 ${mainImage === image ? "opacity-100" : "opacity-80"}`}
-                    onError={() => handleImageError(image)}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
+            {selectedSizeVariant.images && selectedSizeVariant.images.length > 0 && (
+              <motion.div
+                className="grid grid-cols-4 gap-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                {selectedSizeVariant.images.map((image, index) => (
+                  <motion.div
+                    key={index}
+                    className={`aspect-square overflow-hidden rounded-lg cursor-pointer transition-all duration-300 ${
+                      mainImage === image
+                        ? "border-2 ring-2 ring-teal-500 ring-opacity-50 transform scale-105"
+                        : "border border-gray-200 hover:border-teal-300 hover:shadow-md"
+                    }`}
+                    onClick={() => {
+                      setMainImage(image)
+                      setIsZoomed(false) // Reset zoom state when changing images
+                    }}
+                    whileHover={{ scale: mainImage === image ? 1.05 : 1.03 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Image
+                      src={getImageSrc(image) || "/placeholder.svg"}
+                      alt={`${product.name || "Product"} view ${index + 1}`}
+                      width={150}
+                      height={150}
+                      className={`object-cover w-full h-full transition-opacity duration-300 ${mainImage === image ? "opacity-100" : "opacity-80"}`}
+                      onError={() => handleImageError(image)}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+            )}
           </div>
 
           {/* Product Details */}
@@ -881,23 +926,8 @@ export function ProductDetail({ productId }: { productId: string }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                {product.name}
+                {product.name || "Product Name"}
               </motion.h1>
-
-              {/* Product Rating */}
-              <motion.div
-                className="flex items-center mt-2"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.4 }}
-              >
-                <div className="flex">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star key={star} className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                  ))}
-                </div>
-                <span className="ml-2 text-sm text-gray-500">4.9 (120 reviews)</span>
-              </motion.div>
             </div>
 
             {/* Price Section */}
@@ -912,7 +942,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                   className="flex items-center space-x-4"
                 >
                   <span className="text-3xl font-bold text-gray-900">
-                    ₹{selectedSizeVariant.price.toLocaleString("en-IN")}
+                    ₹{(selectedSizeVariant.price || 0).toLocaleString("en-IN")}
                   </span>
                   {selectedSizeVariant.originalPrice &&
                     selectedSizeVariant.originalPrice > selectedSizeVariant.price && (
@@ -920,9 +950,10 @@ export function ProductDetail({ productId }: { productId: string }) {
                         ₹{selectedSizeVariant.originalPrice.toLocaleString("en-IN")}
                       </span>
                     )}
-                  {discountPercentage > 0 && (
+                  {discountPercentage > 0 && selectedSizeVariant.originalPrice && (
                     <span className="text-green-600 font-medium">
-                      Save ₹{(selectedSizeVariant.originalPrice! - selectedSizeVariant.price).toLocaleString("en-IN")}
+                      Save ₹
+                      {(selectedSizeVariant.originalPrice - (selectedSizeVariant.price || 0)).toLocaleString("en-IN")}
                     </span>
                   )}
                 </motion.div>
@@ -935,107 +966,39 @@ export function ProductDetail({ productId }: { productId: string }) {
               <div className="mt-4 border-t border-gray-200 pt-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-medium text-gray-900">Select Size</h3>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <button
-                        className="flex items-center text-sm text-teal-600 hover:text-teal-700"
-                        onClick={() => setShowSizeGuide(true)}
-                      >
-                        <Ruler className="h-4 w-4 mr-1" />
-                        Size Guide
-                      </button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-3xl">
-                      <DialogHeader>
-                        <DialogTitle>Size Guide</DialogTitle>
-                        <DialogDescription>Find your perfect fit with our detailed size chart.</DialogDescription>
-                      </DialogHeader>
-                      <div className="p-4">
-                        {/* Size guide content - would be tailored to the product category */}
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm border-collapse">
-                            <thead>
-                              <tr className="bg-gray-100">
-                                <th className="border border-gray-300 p-2 text-left">Size</th>
-                                <th className="border border-gray-300 p-2 text-left">Diameter (mm)</th>
-                                <th className="border border-gray-300 p-2 text-left">US Size</th>
-                                <th className="border border-gray-300 p-2 text-left">UK Size</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr>
-                                <td className="border border-gray-300 p-2">XS</td>
-                                <td className="border border-gray-300 p-2">14-15</td>
-                                <td className="border border-gray-300 p-2">3-4</td>
-                                <td className="border border-gray-300 p-2">F-G</td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 p-2">S</td>
-                                <td className="border border-gray-300 p-2">15-16</td>
-                                <td className="border border-gray-300 p-2">4-5</td>
-                                <td className="border border-gray-300 p-2">H-I</td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 p-2">M</td>
-                                <td className="border border-gray-300 p-2">16-17</td>
-                                <td className="border border-gray-300 p-2">5-6</td>
-                                <td className="border border-gray-300 p-2">J-K</td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 p-2">L</td>
-                                <td className="border border-gray-300 p-2">17-18</td>
-                                <td className="border border-gray-300 p-2">6-7</td>
-                                <td className="border border-gray-300 p-2">L-M</td>
-                              </tr>
-                              <tr>
-                                <td className="border border-gray-300 p-2">XL</td>
-                                <td className="border border-gray-300 p-2">18-19</td>
-                                <td className="border border-gray-300 p-2">7-8</td>
-                                <td className="border border-gray-300 p-2">N-O</td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        <div className="mt-4">
-                          <h4 className="font-medium mb-2">How to Measure</h4>
-                          <p className="text-gray-600 mb-2">
-                            For the most accurate measurement, use a string or paper strip to wrap around your finger.
-                            Mark where the ends meet and measure the length against a ruler.
-                          </p>
-                          <p className="text-gray-600">
-                            If you're between sizes, we recommend sizing up for a more comfortable fit.
-                          </p>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Link href="/guide" className="flex items-center text-sm text-teal-600 hover:text-teal-700">
+                    <Ruler className="h-4 w-4 mr-1" />
+                    Size Guide
+                  </Link>
                 </div>
 
-                <div className="grid grid-cols-5 gap-2">
-                  {sizeVariants.map((variant) => (
-                    <motion.button
-                      key={variant.id}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleSizeSelect(variant)}
-                      className={`relative p-2 border rounded-md text-center text-sm ${
-                        selectedSizeVariant.id === variant.id
-                          ? "border-teal-500 bg-teal-50 text-teal-700 font-medium"
-                          : variant.stock > 0
-                            ? "border-gray-300 hover:border-teal-300"
-                            : "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
-                      disabled={variant.stock <= 0 || isUpdatingVariant}
-                    >
-                      {variant.size}
-                      {variant.stock <= 0 && (
-                        <span className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-md text-xs text-gray-500">
-                          Out of stock
-                        </span>
-                      )}
-                    </motion.button>
-                  ))}
-                </div>
+                {sizeVariants.length > 0 && (
+                  <div className="grid grid-cols-5 gap-2">
+                    {sizeVariants.map((variant) => (
+                      <motion.button
+                        key={variant.id}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleSizeSelect(variant)}
+                        className={`relative p-2 border rounded-md text-center text-sm ${
+                          selectedSizeVariant.id === variant.id
+                            ? "border-teal-500 bg-teal-50 text-teal-700 font-medium"
+                            : variant.stock > 0
+                              ? "border-gray-300 hover:border-teal-300"
+                              : "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
+                        disabled={variant.stock <= 0 || isUpdatingVariant}
+                      >
+                        {variant.size}
+                        {variant.stock <= 0 && (
+                          <span className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-md text-xs text-gray-500">
+                            Out of stock
+                          </span>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
