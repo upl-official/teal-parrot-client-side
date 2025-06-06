@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Inter, Montserrat, Antic_Didone } from "next/font/google"
+import { Inter, Montserrat, Antic_Didone, Tenor_Sans } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { TransitionProvider } from "@/lib/transition-context"
@@ -9,11 +9,33 @@ import { ScrollToTop } from "@/components/scroll-to-top"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const montserrat = Montserrat({ subsets: ["latin"], variable: "--font-montserrat" })
+
+const anticDidone = Tenor_Sans({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-antic-didone",
+})
+
+const tenorSans = Antic_Didone({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-tenor-sans",
+})
+
+{/*
 const anticDidone = Antic_Didone({
   subsets: ["latin"],
   weight: "400",
   variable: "--font-antic-didone",
 })
+*/}
+{/*
+const tenorSans = Tenor_Sans({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-tenor-sans",
+})
+*/}
 
 export const metadata: Metadata = {
   title: "Teal Parrot | Silver Jewelry",
@@ -47,7 +69,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
         <link rel="manifest" href="/favicon/site.webmanifest" />
       </head>
-      <body className={`${inter.variable} ${montserrat.variable} ${anticDidone.variable}`}>
+      <body className={`${inter.variable} ${montserrat.variable} ${anticDidone.variable} ${tenorSans.variable}`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <ScrollProvider>
             <TransitionProvider>

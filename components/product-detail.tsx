@@ -1063,7 +1063,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                 </Button>
                 <Button
                   onClick={handleBuyNow}
-                  className="bg-orange-500 hover:bg-orange-600 text-white py-6 text-base"
+                  className="bg-teal-500 hover:bg-teal-600 text-white py-6 text-base"
                   disabled={
                     (selectedSizeVariant.stock !== undefined && selectedSizeVariant.stock <= 0) ||
                     isAddingToCart ||

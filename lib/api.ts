@@ -463,7 +463,10 @@ export async function fetchWishlistItems(userId: string): Promise<WishlistItem[]
     }
 
     // If data is an empty object
-    if (typeof response.data === "object" && Object.keys(response.data).length === 0) {
+    if (
+      typeof response.data === "object" &&
+      (Object.keys(response.data).length === 0 || (response.data.success === false && "message" in response.data))
+    ) {
       console.info("Wishlist is empty for user:", userId)
       return DEV_MODE ? getFallbackWishlistItems() : []
     }

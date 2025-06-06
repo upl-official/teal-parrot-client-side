@@ -20,7 +20,7 @@ export default function Home() {
       <FeaturedProducts />
       <GiftSuggestionSection />
       <BenefitsSection />
-      <QuoteCtaSection />
+      {/*<QuoteCtaSection />*/}
       <FeaturedProductSection />
       <TestimonialsSection />
       <PromoBanner />

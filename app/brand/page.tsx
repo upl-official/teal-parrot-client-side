@@ -53,14 +53,13 @@ export default function BrandPage() {
                 <span className="absolute bottom-0 left-0 w-16 h-1 bg-teal-500"></span>
               </h2>
               <p className="mb-6 text-lg">
-                Teal Parrot was founded with a passion for creating exquisite silver jewelry that combines traditional
-                craftsmanship with contemporary design. Our journey began with a simple belief: that beautiful jewelry
-                should be accessible to everyone without compromising on quality or design.
+                At Teal Parrot, elegance is never ordinary. We are a premium silver jewelry brand rooted in timeless artistry and conscious design. Every piece we create is crafted with 925 sterling silver and set with handpicked premium zircon and moissanite stones—ensuring brilliance, longevity, and sophistication.
               </p>
               <p className="text-lg">
-                Each piece in our collection is meticulously crafted using 925 sterling silver, ensuring both beauty and
-                durability. We take pride in our attention to detail and commitment to excellence, resulting in jewelry
-                that becomes a cherished part of your personal style story.
+                Our collections are curated to celebrate individuality and everyday luxury. We believe jewelry should not just accessorize, but empower—each piece telling a story as unique as the woman who wears it. With limited, exclusive designs and a deep respect for craftsmanship, Teal Parrot is more than a label—it's a reflection of grace, strength, and refined taste.
+              </p>
+              <p className="text-lg">
+                Designed to dazzle. Made to last. Worn to feel.
               </p>
             </AnimatedContainer>
           </div>
@@ -174,12 +173,11 @@ export default function BrandPage() {
               <p className="mb-6 text-lg">
                 The Teal Parrot logo represents our brand's core values and aesthetic. The flowing lines symbolize the
                 fluidity and elegance of our designs, while the parrot emblem represents creativity, beauty, and
-                freedom.
+                freedom. The two flowing lines together forms the letter "T" and "P" and also a simplified version of parrot.
               </p>
               <p className="text-lg">
                 The teal color was chosen for its representation of clarity, communication, and creativity – qualities
-                that are at the heart of our design philosophy. Just as our jewelry makes a statement, our logo reflects
-                our commitment to creating pieces that are both distinctive and timeless.
+                that are at the heart of our design philosophy. Just as our jewelry makes a statement, our logo reflects our commitment to creating pieces that are both distinctive and timeless.
               </p>
             </AnimatedContainer>
 

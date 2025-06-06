@@ -2,28 +2,23 @@
 
 import { useRef } from "react"
 import { motion, useInView } from "framer-motion"
-import { Award, Truck, RefreshCw, Shield } from "lucide-react"
+import { Sparkles, Gem, Hourglass } from "lucide-react"
 
 const benefits = [
   {
-    icon: Award,
-    title: "Premium Quality",
-    description: "Each piece is crafted with the finest 925 sterling silver, ensuring lasting beauty and value.",
+    icon: Sparkles,
+    title: "925 Sterling Silver",
+    description: "Hallmarked and premium quality.",
   },
   {
-    icon: Truck,
-    title: "Free Shipping",
-    description: "Enjoy complimentary shipping on all orders over ₹1999 across India.",
+    icon: Gem,
+    title: "Ethical Stones",
+    description: "Moissanite and zircon sourced with care.",
   },
   {
-    icon: RefreshCw,
-    title: "Easy Returns",
-    description: "Not completely satisfied? Return within 30 days for a full refund or exchange.",
-  },
-  {
-    icon: Shield,
-    title: "Secure Payment",
-    description: "Shop with confidence using our secure and encrypted payment methods.",
+    icon: Hourglass,
+    title: "Timeless Design",
+    description: "Minimal pieces made to stay in style.",
   },
 ]
 
@@ -40,13 +35,13 @@ export function BenefitsSection() {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose Teal Parrot</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Teal Parrot</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            We're committed to providing exceptional quality, service, and value with every purchase.
+            Thoughtfully crafted. Honestly priced. Designed to last.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {benefits.map((benefit, index) => (
             <motion.div
               key={index}

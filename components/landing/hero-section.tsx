@@ -13,20 +13,20 @@ export function HeroSection() {
   const slides = [
     {
       image: "https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/hero-images/teal-parrot-hero+(4).webp",
-      heading: "Timeless Elegance in Silver",
-      subheading: "Handcrafted jewelry that tells your unique story",
+      heading: "Refined Radiance. Everyday Elegance",
+      subheading: "Discover handcrafted silver jewelry designed for quiet luxury and rare individuality.",
       cta: "Explore Collection",
     },
     {
       image: "https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/hero-images/teal-parrot-hero+(1).webp",
-      heading: "Discover Our Latest Collection",
-      subheading: "Exquisite designs that blend tradition with contemporary style",
+      heading: "Discover the New Collection",
+      subheading: "Timeless designs. Modern elegance. Crafted to shine",
       cta: "Shop New Arrivals",
     },
     {
       image: "https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/hero-images/teal-parrot-hero+(2).webp",
-      heading: "Artisan Craftsmanship",
-      subheading: "Each piece meticulously crafted with attention to detail",
+      heading: "A New Language of Luxury",
+      subheading: "Featuring zircon and moissanite stones, every piece is intentionally crafted, in limited numbers, to celebrate individuality over trend",
       cta: "Our Story",
     },
   ]

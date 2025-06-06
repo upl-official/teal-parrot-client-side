@@ -31,12 +31,11 @@ export function PromoBanner() {
           </span>
           <h2 className="text-3xl md:text-4xl font-bold mb-4">20% Off Your First Purchase</h2>
           <p className="text-white/90 text-lg mb-8">
-            Join our community today and receive an exclusive discount on your first order. Discover the perfect piece
-            to complement your style.
+            Join our community today and unlock an exclusive discount on your very first order. Discover the perfect piece that complements your unique style.
           </p>
           <Link href="/signup">
             <Button size="lg" className="bg-teal-500 hover:bg-teal-600 text-white px-8 py-6 text-lg rounded-md">
-              Sign Up Now
+              Sign Up Now and start shining with savings!
             </Button>
           </Link>
         </motion.div>

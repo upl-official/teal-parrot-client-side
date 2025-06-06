@@ -32,12 +32,10 @@ export function GiftSuggestionSection() {
             className="order-2 md:order-1 flex flex-col justify-center space-y-6"
           >
             <p className="text-gray-700 leading-relaxed">
-              A silver ring is more than just an accessory—it's a token of affection, a symbol of commitment, and a
-              timeless keepsake that carries your sentiments for years to come.
+              A silver ring is not just an accessory — it's a quiet expression of love, a symbol of promise, and a piece to hold close for years.
             </p>
             <p className="text-gray-700 leading-relaxed">
-              Our collection features exquisite designs ranging from minimalist bands to intricate statement pieces,
-              ensuring you'll find the perfect ring to express your feelings.
+              From refined bands to delicate statement designs, each piece in our collection is crafted to speak without saying much.
             </p>
             <div>
               <Button

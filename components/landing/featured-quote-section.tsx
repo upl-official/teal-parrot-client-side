@@ -34,13 +34,18 @@ export function FeaturedQuoteSection() {
             className="flex flex-col justify-center space-y-6"
           >
             <blockquote className="text-2xl md:text-3xl lg:text-4xl font-serif italic text-gray-800 leading-relaxed">
-              "Like starlight captured in metal, silver jewelry shines with eternal grace."
+              "All the Sparkle. None of the Compromise."
             </blockquote>
             <div className="w-16 h-1 bg-teal-500"></div>
             <p className="text-gray-600">
-              Our artisans craft each piece to capture the ethereal beauty of starlight, creating jewelry that
-              transcends time and trends.
+              Brilliant like a diamond, but more sustainable and just as stunning — moissanite stones offer fire, clarity, and timeless beauty without the luxury markup.
             </p>
+            <ul className="list-inside list-disc">
+              <li>Ethically Sourced</li>
+              <li>Higher brilliance than diamonds</li>
+              <li>Exceptional durability</li>
+              <li>Great value for everyday elegance</li>
+            </ul>
             <div>
               <Button
                 asChild
@@ -48,7 +53,7 @@ export function FeaturedQuoteSection() {
               >
                 <Link href="/collection">
                   <Button className="justify-center font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 h-11 bg-teal-500 hover:bg-teal-600 text-white px-8 py-6 text-lg rounded-md flex items-center gap-2 group">
-                    Explore Our Celestial Collection
+                     Discover the Magic of Moissanite
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="24"
