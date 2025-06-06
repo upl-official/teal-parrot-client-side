@@ -1,6 +1,5 @@
 import { PageLayout } from "@/components/page-layout"
-import { ContactForm } from "@/components/contact/contact-form"
-import { Mail, Phone, MapPin, Clock, MessageCircle, HelpCircle } from "lucide-react"
+import { Mail, Instagram, Facebook } from "lucide-react"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
@@ -31,148 +30,70 @@ export default function ContactPage() {
           </div>
         </div>
 
-        {/* Contact Information Cards */}
+        {/* Contact Information */}
         <div className="container mx-auto px-4 py-16">
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
-            <div className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg">
-              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-teal-50 transition-transform group-hover:scale-110"></div>
-              <div className="relative">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-teal-100 text-teal-600">
-                  <Mail className="h-6 w-6" />
+          <div className="mx-auto max-w-2xl">
+            {/* Email Section */}
+            <div className="mb-8">
+              <h2 className="mb-4 flex items-center gap-3 text-2xl font-bold text-gray-900">
+                <Mail className="h-6 w-6 text-teal-600" />
+                Email:
+              </h2>
+              <p className="text-lg text-gray-700">
+                Email us at:{" "}
+                <a
+                  href="mailto:info@acotoman.com"
+                  className="font-medium text-teal-600 transition-colors hover:text-teal-700 hover:underline"
+                >
+                  info@acotoman.com
+                </a>
+              </p>
+            </div>
+
+            {/* Social Media Section */}
+            <div className="mb-8">
+              <h2 className="mb-4 text-2xl font-bold text-gray-900">Social Media:</h2>
+              <p className="mb-4 text-lg text-gray-700">You can also reach out via:</p>
+
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <Instagram className="h-5 w-5 text-pink-600" />
+                  <span className="text-lg text-gray-700">
+                    Instagram:{" "}
+                    <a
+                      href="https://www.instagram.com/teal_parrot"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-teal-600 transition-colors hover:text-teal-700 hover:underline"
+                    >
+                      @teal_parrot
+                    </a>
+                  </span>
                 </div>
-                <h3 className="mb-3 text-xl font-semibold">Email Us</h3>
-                <p className="mb-4 text-gray-600">For general inquiries and support</p>
-                <a
-                  href="mailto:hello@tealparrot.com"
-                  className="block items-center text-teal-500 transition-colors hover:text-teal-700"
-                >
-                  hello@tealparrot.com
-                </a>
-                <a
-                  href="mailto:support@tealparrot.com"
-                  className="mt-1 block items-center text-teal-500 transition-colors hover:text-teal-700"
-                >
-                  support@tealparrot.com
-                </a>
+
+                <div className="flex items-center gap-3">
+                  <Facebook className="h-5 w-5 text-blue-600" />
+                  <span className="text-lg text-gray-700">
+                    Facebook:{" "}
+                    <a
+                      href="https://www.facebook.com/profile.php?id=61571249081806"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-medium text-teal-600 transition-colors hover:text-teal-700 hover:underline"
+                    >
+                      @teal_parrot
+                    </a>
+                  </span>
+                </div>
               </div>
             </div>
 
-            <div className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg">
-              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-teal-50 transition-transform group-hover:scale-110"></div>
-              <div className="relative">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-teal-100 text-teal-600">
-                  <Phone className="h-6 w-6" />
-                </div>
-                <h3 className="mb-3 text-xl font-semibold">Call Us</h3>
-                <p className="mb-4 text-gray-600">Mon-Fri from 9am to 6pm</p>
-                <a
-                  href="tel:+919999999999"
-                  className="block items-center text-teal-500 transition-colors hover:text-teal-700"
-                >
-                  +91 99999 99999
-                </a>
-                <a
-                  href="tel:04719999999"
-                  className="mt-1 block items-center text-teal-500 transition-colors hover:text-teal-700"
-                >
-                  0471 999 9999
-                </a>
-              </div>
-            </div>
-
-            <div className="group relative overflow-hidden rounded-xl bg-white p-6 shadow-md transition-all hover:-translate-y-1 hover:shadow-lg md:col-span-2 lg:col-span-1">
-              <div className="absolute -right-4 -top-4 h-24 w-24 rounded-full bg-teal-50 transition-transform group-hover:scale-110"></div>
-              <div className="relative">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-teal-100 text-teal-600">
-                  <MapPin className="h-6 w-6" />
-                </div>
-                <h3 className="mb-3 text-xl font-semibold">Visit Us</h3>
-                <p className="mb-4 text-gray-600">Our flagship store</p>
-                <address className="not-italic text-gray-700">
-                  Acotoman India Pvt. Ltd.
-                  <br />
-                  Sasthamangalam, Thiruvananthapuram,
-                  <br />
-                  Kerala, IND, 695010
-                </address>
-                <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
-                  <Clock className="h-4 w-4" />
-                  <span>Open 10:00 AM - 8:00 PM</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Contact Form Section */}
-          <div className="mt-16 grid grid-cols-1 gap-16 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              <div className="rounded-xl bg-white p-6 shadow-md md:p-8">
-                <div className="mb-8">
-                  <h2 className="mb-2 text-2xl font-bold">Send Us a Message</h2>
-                  <p className="text-gray-600">
-                    Fill out the form below and our team will get back to you as soon as possible.
-                  </p>
-                </div>
-                <ContactForm />
-              </div>
-            </div>
-
-            <div className="lg:col-span-2">
-              <div className="mb-8 rounded-xl bg-white p-6 shadow-md">
-                <h2 className="mb-4 text-2xl font-bold">Find Us</h2>
-                <div className="h-[300px] overflow-hidden rounded-lg bg-gray-200">
-                  <iframe
-                    src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3945.859861826859!2d76.9698123!3d8.512984600000001!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3b05bbeda235d6b9%3A0x4537ea80c34b50b6!2sAcotoman%20India%20Private%20Limited!5e0!3m2!1sen!2sin!4v1745422849972!5m2!1sen!2sin"
-                    className="w-full h-full object-cover"
-                    style={{ border: 0, display: "block" }}
-                    allowFullScreen
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    title="Teal Parrot Store Location"
-                  ></iframe>
-                </div>
-              </div>
-
-              <div className="rounded-xl bg-white p-6 shadow-md">
-                <h3 className="mb-4 flex items-center gap-2 text-xl font-semibold">
-                  <HelpCircle className="h-5 w-5 text-teal-500" />
-                  Frequently Asked Questions
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium">What are your shipping times?</h4>
-                    <p className="text-sm text-gray-600">
-                      We typically ship within 1-2 business days, with delivery taking 3-5 days depending on your
-                      location.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">Do you offer international shipping?</h4>
-                    <p className="text-sm text-gray-600">
-                      Yes, we ship to most countries worldwide. International shipping typically takes 7-14 business
-                      days.
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="font-medium">What is your return policy?</h4>
-                    <p className="text-sm text-gray-600">
-                      We offer a 30-day return policy for unused items in their original packaging.
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-6 flex items-center justify-between rounded-lg bg-teal-50 p-4">
-                  <div className="flex items-center gap-3">
-                    <MessageCircle className="h-5 w-5 text-teal-500" />
-                    <span className="text-sm font-medium">Need more help?</span>
-                  </div>
-                  <a
-                    href="#contact-form"
-                    className="rounded bg-teal-100 px-3 py-1 text-sm font-medium text-teal-700 transition-colors hover:bg-teal-200"
-                  >
-                    Contact Support
-                  </a>
-                </div>
-              </div>
+            {/* Note Section */}
+            <div className="rounded-lg bg-teal-50 p-6 border-l-4 border-teal-500">
+              <p className="text-gray-700">
+                <strong>Note:</strong> Emails are checked more frequently than social messages. For urgent requests, we
+                recommend contacting us via email!
+              </p>
             </div>
           </div>
         </div>
