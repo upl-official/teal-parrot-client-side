@@ -29,11 +29,11 @@ export function FeaturedProducts() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   const productIds = [
-    "67254422d6e125906ef60c21",
-    "67254f7b7b8e3ef7d0fcea1b",
-    "681a2e47e25bfb5f536c9f77",
-    "681e23961938fba6f3c9ce19",
-    "681a3ada3f3f74389fd115ea",
+    "684549fca4e7cb66dda15ded",
+    "68454c09a4e7cb66dda15efb",
+    "68454c7aa4e7cb66dda15f3a",
+    "684551a3a4e7cb66dda162d1",
+    "68455275a4e7cb66dda1635e",
   ]
 
   const groupProductsByNameAndCategory = useCallback((products: Product[]) => {

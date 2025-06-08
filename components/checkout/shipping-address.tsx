@@ -29,10 +29,21 @@ export function ShippingAddress({
   onPrevious,
 }: ShippingAddressProps) {
   const [isAddingAddress, setIsAddingAddress] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   const handleAddressAdded = (newAddress: Address) => {
     setSelectedAddress(newAddress._id)
     setIsAddingAddress(false)
+  }
+
+  const handleContinueToPayment = async () => {
+    setIsProcessing(true)
+    try {
+      await onNext()
+    } catch (error) {
+      console.error("Error proceeding to payment:", error)
+      setIsProcessing(false)
+    }
   }
 
   const shippingOptions = [
@@ -169,12 +180,23 @@ export function ShippingAddress({
       </div>
 
       <div className="p-6 bg-gray-50 flex flex-col sm:flex-row justify-between items-center">
-        <Button variant="outline" onClick={onPrevious} className="mb-4 sm:mb-0">
+        <Button variant="outline" onClick={onPrevious} className="mb-4 sm:mb-0" disabled={isProcessing}>
           Back to Order Review
         </Button>
 
-        <Button onClick={onNext} className="bg-teal-500 hover:bg-teal-600 text-white px-8" disabled={!selectedAddress}>
-          Continue to Payment
+        <Button
+          onClick={handleContinueToPayment}
+          className="bg-teal-500 hover:bg-teal-600 text-white px-8"
+          disabled={!selectedAddress || isProcessing}
+        >
+          {isProcessing ? (
+            <>
+              <span className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Processing...
+            </>
+          ) : (
+            "Continue to Payment"
+          )}
         </Button>
       </div>
     </div>

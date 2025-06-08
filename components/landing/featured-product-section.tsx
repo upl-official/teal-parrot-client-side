@@ -16,7 +16,7 @@ export function FeaturedProductSection() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Product IDs to fetch
-  const productIds = ["67254422d6e125906ef60c21", "681a2e47e25bfb5f536c9f77", "681a325b3f3f74389fd1084a"]
+  const productIds = ["68454acaa4e7cb66dda15e7d", "68454c7aa4e7cb66dda15f3a", "684551eaa4e7cb66dda16310"]
 
   // Fetch all products
   useEffect(() => {

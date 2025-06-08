@@ -16,9 +16,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * Format price according to the following rules:
+ * - If decimal places are zero or first two decimal places are zero, round to nearest whole number
+ * - Otherwise, display with exactly two decimal places
+ */
 export const formatPrice = (amount: number) => {
-  return amount.toLocaleString("en-IN", {
-    style: "currency",
-    currency: "INR",
-  })
+  if (!amount && amount !== 0) return "₹0"
+
+  // Check if the decimal part is zero or if the first two decimal places are zero
+  const decimalPart = amount - Math.floor(amount)
+  const firstTwoDecimals = Math.round(decimalPart * 100) / 100
+
+  if (decimalPart === 0 || firstTwoDecimals === 0) {
+    // Round to nearest whole number
+    return `₹${Math.round(amount).toLocaleString("en-IN")}`
+  } else {
+    // Display with exactly two decimal places
+    return `₹${amount.toFixed(2).toLocaleString("en-IN")}`
+  }
 }

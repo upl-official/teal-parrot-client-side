@@ -7,13 +7,31 @@ import { fetchSimilarProducts } from "@/lib/api"
 import type { Product } from "@/lib/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-// Add the import for ProductImage at the top of the file
 import { ProductImage } from "@/components/ui/product-image"
+import { formatPrice } from "@/lib/utils"
 
 // Add the placeholder image constant at the top of the file, after the imports
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
 
-export function SimilarProducts({ category }: { category?: string }) {
+// Utility function to shuffle an array
+function shuffleArray<T>(array: T[]): T[] {
+  const newArray = [...array]
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[newArray[i], newArray[j]] = [newArray[j], newArray[i]]
+  }
+  return newArray
+}
+
+export function SimilarProducts({
+  category,
+  currentProductId,
+  currentProductName,
+}: {
+  category?: string
+  currentProductId?: string
+  currentProductName?: string
+}) {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,8 +40,27 @@ export function SimilarProducts({ category }: { category?: string }) {
   useEffect(() => {
     const getProducts = async () => {
       try {
+        setLoading(true)
         const data = await fetchSimilarProducts(category)
-        setProducts(data)
+
+        // Filter out the current product and its variants (products with the same name)
+        let filteredProducts = data
+
+        if (currentProductId) {
+          // Remove the current product
+          filteredProducts = filteredProducts.filter((product) => product._id !== currentProductId)
+        }
+
+        if (currentProductName) {
+          // Remove products with the same name (variants/sizes of the same product)
+          filteredProducts = filteredProducts.filter((product) => product.name !== currentProductName)
+        }
+
+        // Shuffle the products for random display
+        const shuffledProducts = shuffleArray(filteredProducts)
+
+        // Limit to 8 products for display
+        setProducts(shuffledProducts.slice(0, 8))
       } catch (error) {
         console.error("Error fetching similar products:", error)
         setError("Failed to load similar products. Please try again later.")
@@ -33,7 +70,7 @@ export function SimilarProducts({ category }: { category?: string }) {
     }
 
     getProducts()
-  }, [category])
+  }, [category, currentProductId, currentProductName])
 
   const scrollLeft = () => {
     if (scrollContainerRef.current) {
@@ -147,9 +184,9 @@ export function SimilarProducts({ category }: { category?: string }) {
                 </div>
                 <h4 className="mt-2 text-gray-900">{product.name}</h4>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-montserrat font-semibold text-gray-900">₹{product.price}</h3>
+                  <h3 className="font-montserrat font-semibold text-gray-900">{formatPrice(product.price)}</h3>
                   {product.originalPrice && product.originalPrice > product.price && (
-                    <span className="text-gray-500 line-through text-sm">₹{product.originalPrice}</span>
+                    <span className="text-gray-500 line-through text-sm">{formatPrice(product.originalPrice)}</span>
                   )}
                 </div>
               </div>

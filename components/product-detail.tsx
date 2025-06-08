@@ -20,6 +20,8 @@ import {
   Check,
   X,
   Ruler,
+  MapPin,
+  CheckCircle,
 } from "lucide-react"
 import {
   fetchProductById,
@@ -28,8 +30,9 @@ import {
   addToWishlist,
   getCurrentUserId,
   fetchWishlistItems,
+  fetchUserAddresses,
 } from "@/lib/api"
-import type { Product } from "@/lib/types"
+import type { Product, Address } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -40,6 +43,12 @@ import { Badge } from "@/components/ui/badge"
 import { motion, AnimatePresence } from "framer-motion"
 import { redirectToLogin } from "@/lib/utils"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { useAuthStore } from "@/lib/auth"
+import { formatPrice } from "@/lib/utils"
+import { SimilarProducts } from "@/components/similar-products"
 
 // Default placeholder image path
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
@@ -271,6 +280,14 @@ export function ProductDetail({ productId }: { productId: string }) {
 
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
+
+  // New states for direct purchase flow
+  const [showAddressDialog, setShowAddressDialog] = useState(false)
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [selectedAddress, setSelectedAddress] = useState<string | null>(null)
+  const [loadingAddresses, setLoadingAddresses] = useState(false)
+  const [processingOrder, setProcessingOrder] = useState(false)
+
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -557,11 +574,52 @@ export function ProductDetail({ productId }: { productId: string }) {
     }
   }
 
+  // Load user addresses
+  const loadUserAddresses = async () => {
+    try {
+      setLoadingAddresses(true)
+      const userId = getCurrentUserId()
+      if (!userId) {
+        toast({
+          title: "Please log in",
+          description: "You need to be logged in to proceed to checkout",
+          variant: "destructive",
+        })
+        // Use the current full path for redirect after login
+        redirectToLogin(window.location.pathname)
+        return false
+      }
+
+      const userAddresses = await fetchUserAddresses(userId)
+      setAddresses(userAddresses)
+
+      // Set default address if available
+      const defaultAddress = userAddresses.find((addr) => addr.isDefault)
+      if (defaultAddress) {
+        setSelectedAddress(defaultAddress._id)
+      } else if (userAddresses.length > 0) {
+        setSelectedAddress(userAddresses[0]._id)
+      }
+
+      return userAddresses.length > 0
+    } catch (error) {
+      console.error("Error loading addresses:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load your addresses. Please try again.",
+        variant: "destructive",
+      })
+      return false
+    } finally {
+      setLoadingAddresses(false)
+    }
+  }
+
+  // Handle Buy Now button click
   const handleBuyNow = async () => {
     if (!product || !selectedSizeVariant) return
 
     try {
-      setIsAddingToCart(true)
       const userId = getCurrentUserId()
       if (!userId) {
         toast({
@@ -574,18 +632,142 @@ export function ProductDetail({ productId }: { productId: string }) {
         return
       }
 
-      // Use the selected variant ID
-      await addToCart(userId, selectedSizeVariant.id, quantity)
-      setIsAddingToCart(false)
-      router.push("/cart")
+      // Load addresses and show address selection dialog
+      const hasAddresses = await loadUserAddresses()
+
+      if (hasAddresses) {
+        setShowAddressDialog(true)
+      } else {
+        toast({
+          title: "No Shipping Address",
+          description: "Please add a shipping address before proceeding to checkout.",
+          variant: "destructive",
+        })
+        router.push("/account/addresses")
+      }
     } catch (error) {
-      setIsAddingToCart(false)
       console.error("Error with buy now:", error)
       toast({
         title: "Error",
         description: "Failed to process your request. Please try again.",
         variant: "destructive",
       })
+    }
+  }
+
+  // Handle direct order placement
+  const handlePlaceDirectOrder = async () => {
+    if (!product || !selectedSizeVariant || !selectedAddress) {
+      toast({
+        title: "Error",
+        description: "Please select a shipping address to continue.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setProcessingOrder(true)
+      const userId = getCurrentUserId()
+
+      // Get the authentication token from the auth store
+      const token = useAuthStore.getState().token
+
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again to continue",
+          variant: "destructive",
+        })
+        setProcessingOrder(false)
+        redirectToLogin(window.location.pathname)
+        return
+      }
+
+      // Prepare order data for direct purchase (Scenario 1)
+      const orderData = {
+        userId,
+        addressId: selectedAddress,
+        productId: selectedSizeVariant.id,
+        quantity: quantity,
+      }
+
+      console.log("Placing direct order with data:", orderData)
+
+      // Call the API to place the order
+      const response = await fetch("https://backend-project-r734.onrender.com/api/v1/users/order/place-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(orderData),
+      })
+
+      // Handle network errors
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Error response:", errorText)
+
+        let errorMessage = "Failed to place order"
+        try {
+          const errorData = JSON.parse(errorText)
+          if (errorData.errors && Array.isArray(errorData.errors)) {
+            errorMessage = errorData.errors.map((err: any) => err.message).join(", ")
+          } else {
+            errorMessage = errorData.message || errorMessage
+          }
+        } catch (e) {
+          // If the error response is not valid JSON, use the default error message
+        }
+
+        throw new Error(errorMessage)
+      }
+
+      const data = await response.json()
+
+      // Check API response success flag
+      if (!data.success) {
+        let errorMessage = "Failed to place order"
+        if (data.errors && Array.isArray(data.errors)) {
+          errorMessage = data.errors.map((err: any) => err.message).join(", ")
+        } else {
+          errorMessage = data.message || errorMessage
+        }
+        throw new Error(errorMessage)
+      }
+
+      // Close the address dialog
+      setShowAddressDialog(false)
+
+      // Check if we have a payment URL to redirect to
+      if (data.paymentUrl) {
+        // Show toast before redirecting
+        toast({
+          title: "Order Placed Successfully",
+          description: "Redirecting to payment gateway...",
+        })
+
+        // Set a small timeout to allow the toast to be seen
+        setTimeout(() => {
+          // Redirect to payment URL
+          window.location.href = data.paymentUrl
+        }, 1500)
+
+        return
+      }
+
+      // If no payment URL, show error
+      throw new Error("Payment URL not received from server")
+    } catch (error) {
+      console.error("Error placing direct order:", error)
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to place order. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setProcessingOrder(false)
     }
   }
 
@@ -942,18 +1124,17 @@ export function ProductDetail({ productId }: { productId: string }) {
                   className="flex items-center space-x-4"
                 >
                   <span className="text-3xl font-bold text-gray-900">
-                    ₹{(selectedSizeVariant.price || 0).toLocaleString("en-IN")}
+                    {formatPrice(selectedSizeVariant.price || 0)}
                   </span>
                   {selectedSizeVariant.originalPrice &&
                     selectedSizeVariant.originalPrice > selectedSizeVariant.price && (
                       <span className="text-xl text-gray-500 line-through">
-                        ₹{selectedSizeVariant.originalPrice.toLocaleString("en-IN")}
+                        {formatPrice(selectedSizeVariant.originalPrice)}
                       </span>
                     )}
                   {discountPercentage > 0 && selectedSizeVariant.originalPrice && (
                     <span className="text-green-600 font-medium">
-                      Save ₹
-                      {(selectedSizeVariant.originalPrice - (selectedSizeVariant.price || 0)).toLocaleString("en-IN")}
+                      Save {formatPrice(selectedSizeVariant.originalPrice - (selectedSizeVariant.price || 0))}
                     </span>
                   )}
                 </motion.div>
@@ -1067,10 +1248,11 @@ export function ProductDetail({ productId }: { productId: string }) {
                   disabled={
                     (selectedSizeVariant.stock !== undefined && selectedSizeVariant.stock <= 0) ||
                     isAddingToCart ||
-                    isUpdatingVariant
+                    isUpdatingVariant ||
+                    processingOrder
                   }
                 >
-                  {isAddingToCart ? (
+                  {processingOrder ? (
                     <>
                       <span className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                       Processing...
@@ -1126,8 +1308,10 @@ export function ProductDetail({ productId }: { productId: string }) {
               <div className="flex items-center">
                 <RotateCcw className="h-5 w-5 text-teal-600 mr-2" />
                 <div>
-                  <p className="text-sm font-medium">Easy Returns</p>
-                  <p className="text-xs text-gray-500">10 days return policy</p>
+                  <p className="text-sm font-medium">Easy Replacement</p>
+                  <p className="text-xs text-gray-500">
+                    For wrong products and manufacturing defects. Learn more at Return & Exchange Policy
+                  </p>
                 </div>
               </div>
             </div>
@@ -1160,7 +1344,9 @@ export function ProductDetail({ productId }: { productId: string }) {
                     )}
                     {product.coating && (
                       <tr className="border-b border-gray-200">
-                        <td className="py-3 px-4 font-medium">Plating</td>
+                        <td className="py-3 px-4 font-medium">
+                          {product.category === "Earrings" ? "Classification" : "Plating"}
+                        </td>
                         <td className="py-3 px-4">{product.coating}</td>
                       </tr>
                     )}
@@ -1189,6 +1375,103 @@ export function ProductDetail({ productId }: { productId: string }) {
           </div>
         </div>
       </div>
+
+      {/* Address Selection Dialog */}
+      <Dialog open={showAddressDialog} onOpenChange={setShowAddressDialog}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Select Shipping Address</DialogTitle>
+          </DialogHeader>
+
+          {loadingAddresses ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-teal-500"></div>
+            </div>
+          ) : addresses.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500 mb-4">You don't have any saved addresses</p>
+              <Button
+                onClick={() => {
+                  setShowAddressDialog(false)
+                  router.push("/account/addresses")
+                }}
+                className="bg-teal-500 hover:bg-teal-600"
+              >
+                <MapPin className="mr-2 h-4 w-4" /> Add New Address
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                <RadioGroup
+                  value={selectedAddress || undefined}
+                  onValueChange={setSelectedAddress}
+                  className="grid grid-cols-1 gap-4"
+                >
+                  {addresses.map((address) => (
+                    <div key={address._id} className="relative">
+                      <RadioGroupItem value={address._id} id={`address-${address._id}`} className="peer sr-only" />
+                      <Label
+                        htmlFor={`address-${address._id}`}
+                        className="flex flex-col p-4 border-2 rounded-lg cursor-pointer hover:border-teal-500 peer-data-[state=checked]:border-teal-500 peer-data-[state=checked]:bg-teal-50"
+                      >
+                        <div className="flex justify-between">
+                          <span className="font-medium">{address.address}</span>
+                          {address.isDefault && (
+                            <span className="text-xs bg-teal-100 text-teal-800 px-2 py-1 rounded">Default</span>
+                          )}
+                        </div>
+                        <span className="text-sm text-gray-500 mt-1">
+                          {address.city}, {address.state}, {address.pincode}
+                        </span>
+                      </Label>
+                      {selectedAddress === address._id && (
+                        <CheckCircle className="absolute top-4 right-4 h-5 w-5 text-teal-500" />
+                      )}
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              <div className="flex justify-between mt-6">
+                <Button variant="outline" onClick={() => setShowAddressDialog(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handlePlaceDirectOrder}
+                  className="bg-teal-500 hover:bg-teal-600"
+                  disabled={!selectedAddress || processingOrder}
+                >
+                  {processingOrder ? (
+                    <>
+                      <span className="mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Processing...
+                    </>
+                  ) : (
+                    "Continue to Payment"
+                  )}
+                </Button>
+              </div>
+
+              <div className="mt-4 text-xs text-gray-500">
+                <p>
+                  By proceeding, you agree to our{" "}
+                  <Link href="/terms-and-conditions" className="text-teal-600 hover:underline">
+                    Terms & Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link href="/privacy-policy" className="text-teal-600 hover:underline">
+                    Privacy Policy
+                  </Link>
+                  .
+                </p>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      {/* Similar Products Section */}
+      <SimilarProducts category={product.category} currentProductId={product._id} currentProductName={product.name} />
     </div>
   )
 }

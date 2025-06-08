@@ -38,7 +38,7 @@ import {
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { useMediaQuery } from "@/hooks/use-media-query"
-import { cn } from "@/lib/utils"
+import { cn, formatPrice } from "@/lib/utils"
 import { Drawer, DrawerContent, DrawerTrigger } from "@/components/ui/drawer"
 import { Separator } from "@/components/ui/separator"
 import { addToCart, addToWishlist, getCurrentUserId } from "@/lib/api"
@@ -48,6 +48,21 @@ import { ProductImage } from "@/components/ui/product-image"
 
 // Add the placeholder image constant at the top of the file, after the imports
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
+
+// Add this function near the top of the file, after the imports
+// This is a utility function to shuffle an array
+function shuffleArray<T>(array: T[]): T[] {
+  // Create a copy of the array to avoid mutating the original
+  const newArray = [...array]
+
+  // Fisher-Yates shuffle algorithm
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[newArray[i], newArray[j]] = [newArray[j], newArray[i]]
+  }
+
+  return newArray
+}
 
 // Define filter panel props interface
 interface FilterSidebarProps {
@@ -549,7 +564,7 @@ const ProductCard = memo(function ProductCard({
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
             >
-              <p className="font-semibold text-gray-900">₹{product.selectedVariant.price}</p>
+              <p className="font-semibold text-gray-900">{formatPrice(product.selectedVariant.price)}</p>
               {product.selectedVariant.originalPrice &&
                 product.selectedVariant.originalPrice > product.selectedVariant.price && (
                   <motion.span
@@ -558,7 +573,7 @@ const ProductCard = memo(function ProductCard({
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                   >
-                    ₹{product.selectedVariant.originalPrice}
+                    {formatPrice(product.selectedVariant.originalPrice)}
                   </motion.span>
                 )}
             </motion.div>
@@ -1076,6 +1091,7 @@ export function ProductCollection() {
   }, [])
 
   // Apply filters and sorting with useCallback to prevent unnecessary re-renders
+  // Find the applyFilters function in the ProductCollection component and modify it:
   const applyFilters = useCallback(() => {
     if (loading) return
 
@@ -1086,6 +1102,18 @@ export function ProductCollection() {
     const filterTimeout = setTimeout(() => {
       // Apply filtering logic
       let result = [...groupedProducts]
+
+      // Check if any filters are applied
+      const hasActiveFilters =
+        searchQuery.trim() !== "" ||
+        filters.categories.length > 0 ||
+        filters.materials.length > 0 ||
+        filters.grades.length > 0 ||
+        filters.sizes.length > 0 ||
+        filters.discount ||
+        filters.priceRange.min > 0 ||
+        (products.length > 0 && filters.priceRange.max < Math.max(...products.map((p) => p.price))) ||
+        sortBy !== "featured"
 
       // Apply search filter
       if (searchQuery.trim()) {
@@ -1172,7 +1200,10 @@ export function ProductCollection() {
           // In a real app, would sort by date
           break
         default: // featured
-          // Keep default order
+          // If no filters are applied, shuffle the products
+          if (!hasActiveFilters) {
+            result = shuffleArray(result)
+          }
           break
       }
 
@@ -1185,7 +1216,7 @@ export function ProductCollection() {
     }, 250) // Debounce time
 
     return () => clearTimeout(filterTimeout)
-  }, [filters, sortBy, searchQuery, groupedProducts, categories, materials, grades, loading])
+  }, [filters, sortBy, searchQuery, groupedProducts, categories, materials, grades, loading, products])
 
   // Apply filters when dependencies change
   useEffect(() => {

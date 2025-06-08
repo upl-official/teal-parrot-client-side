@@ -160,16 +160,18 @@ export async function fetchCompleteProductDetails(productIds: string[]): Promise
 }
 
 export async function fetchSimilarProducts(category?: string): Promise<Product[]> {
-  const data = await apiRequest<{ success: boolean; data: { products: any[] } }>("/product/list")
+  try {
+    // If category is provided, fetch products from that category
+    const endpoint = category ? `/product/list/?category=${encodeURIComponent(category)}` : "/product/list"
 
-  let products = data.data.products.map(processProductData)
+    const data = await apiRequest<{ success: boolean; data: { products: any[] } }>(endpoint)
 
-  if (category) {
-    products = products.filter((product) => product.category === category)
+    // Process and return the products
+    return data.data.products.map(processProductData)
+  } catch (error) {
+    console.error("Error fetching similar products:", error)
+    return []
   }
-
-  // Limit to 8 products for similar items
-  return products.slice(0, 8)
 }
 
 // Add this function to fetch sizes
