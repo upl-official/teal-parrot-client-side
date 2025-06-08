@@ -268,6 +268,7 @@ export function CheckoutProcess() {
       }
 
       const data = await response.json()
+      console.log(data.paymentUrl)
 
       // Check API response success flag
       if (!data.success) {

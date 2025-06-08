@@ -9,6 +9,7 @@ import { removeFromWishlist, addToCart, fetchWishlistItems } from "@/lib/api"
 import type { WishlistItem } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { useAuthStore } from "@/lib/auth"
+import { formatPrice } from "@/lib/utils"
 
 // Default placeholder image path
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
@@ -152,7 +153,7 @@ export function WishlistItems() {
                   </div>
                 )}
 
-                <p className="font-bold text-lg mb-4">₹{item.product.price.toLocaleString("en-IN")}</p>
+                <p className="font-bold text-lg mb-4">{formatPrice(item.product.price)}</p>
                 <div className="flex gap-2">
                   <Button
                     onClick={() => handleAddToCart(item.product._id)}

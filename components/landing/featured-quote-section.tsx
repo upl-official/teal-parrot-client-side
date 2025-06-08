@@ -18,7 +18,7 @@ export function FeaturedQuoteSection() {
             className="relative h-[400px] md:h-[500px] rounded-lg overflow-hidden"
           >
             <Image
-              src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/landing-images/teal-parrot+(1).webp"
+              src="https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/landing-images-2/teal-parrot+(2).webp"
               alt="Silver jewelry reflecting light like starlight"
               fill
               className="object-cover"

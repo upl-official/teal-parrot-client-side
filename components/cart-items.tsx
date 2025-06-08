@@ -9,6 +9,7 @@ import { fetchCartItems, removeFromCart, updateCartItem } from "@/lib/api"
 import type { CartItem as CartItemType } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { useAuthStore } from "@/lib/auth"
+import { formatPrice } from "@/lib/utils"
 
 // Default placeholder image path
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
@@ -206,7 +207,7 @@ export function CartItems() {
                 </div>
               </div>
               <div className="font-bold text-lg sm:text-right w-full sm:w-auto">
-                ₹{(item.product.price * item.quantity).toLocaleString("en-IN")}
+                {formatPrice(item.product.price * item.quantity)}
               </div>
             </div>
           ))}
@@ -217,7 +218,7 @@ export function CartItems() {
           <div className="space-y-2 mb-4">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>₹{totalPrice.toLocaleString("en-IN")}</span>
+              <span>{formatPrice(totalPrice)}</span>
             </div>
             <div className="flex justify-between">
               <span>Shipping</span>
@@ -226,7 +227,7 @@ export function CartItems() {
             <div className="border-t pt-2 mt-2">
               <div className="flex justify-between font-bold">
                 <span>Total</span>
-                <span>₹{totalPrice.toLocaleString("en-IN")}</span>
+                <span>{formatPrice(totalPrice)}</span>
               </div>
             </div>
           </div>

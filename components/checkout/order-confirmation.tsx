@@ -10,6 +10,7 @@ import { fetchProductById } from "@/lib/api"
 
 // Add the import at the top
 import { motion } from "framer-motion"
+import { formatPrice } from "@/lib/utils"
 
 interface OrderConfirmationProps {
   orderDetails: any
@@ -231,7 +232,7 @@ export function OrderConfirmation({
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">₹{item.product.price * item.quantity}</p>
+                      <p className="font-medium">{formatPrice(item.product.price * item.quantity)}</p>
                     </div>
                   </div>
                 ))}
@@ -278,19 +279,19 @@ export function OrderConfirmation({
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
-                  <span>₹{subtotal}</span>
+                  <span>{formatPrice(subtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span>₹{shippingCost}</span>
+                  <span>{formatPrice(shippingCost)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Tax (5%)</span>
-                  <span>₹{tax}</span>
+                  <span>{formatPrice(tax)}</span>
                 </div>
                 <div className="border-t border-gray-200 pt-2 mt-2 flex justify-between font-medium">
                   <span>Total</span>
-                  <span className="text-teal-600">₹{total}</span>
+                  <span className="text-teal-600">{formatPrice(total)}</span>
                 </div>
               </div>
             </div>

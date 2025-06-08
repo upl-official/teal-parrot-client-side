@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react"
 import { fetchProductById } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import type { Product } from "@/lib/types"
+import { formatPrice } from "@/lib/utils"
 
 // Default placeholder image path
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
@@ -302,14 +303,16 @@ export function FeaturedProducts() {
                         )}
 
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-semibold text-gray-900">₹{selectedProduct.price}</span>
-                            {selectedProduct.originalPrice && selectedProduct.originalPrice > selectedProduct.price && (
-                              <span className="text-sm text-gray-500 line-through">
-                                ₹{selectedProduct.originalPrice}
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-semibold text-gray-900">
+                                {formatPrice(selectedProduct.price)}
                               </span>
-                            )}
-                          </div>
+                              {selectedProduct.originalPrice && selectedProduct.    originalPrice > selectedProduct.price && (
+                                  <span className="text-sm text-gray-500 line-through">
+                                  {formatPrice(selectedProduct.originalPrice)}
+                                    </span>
+                                  )}
+                            </div>
                           <button
                             onClick={() => navigateToProduct(selectedProduct._id)}
                             className="text-teal-600 hover:text-teal-700 text-sm font-medium flex items-center"

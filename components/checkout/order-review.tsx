@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { updateCartItem, removeFromCart, getCurrentUserId, fetchProductById } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import type { CartItem } from "@/lib/types"
+import { formatPrice } from "@/lib/utils"
 
 interface OrderReviewProps {
   cartItems: CartItem[]
@@ -185,7 +186,7 @@ export function OrderReview({ cartItems, onNext }: OrderReviewProps) {
               </div>
 
               <div className="mt-4 sm:mt-0 flex flex-col items-end">
-                <span className="text-lg font-semibold text-gray-900">₹{item.product.price}</span>
+                <span className="text-lg font-semibold text-gray-900">{formatPrice(item.product.price)}</span>
 
                 <div className="flex items-center mt-2 border border-gray-300 rounded">
                   <button

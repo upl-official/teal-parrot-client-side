@@ -6,7 +6,7 @@ export function PromoSection() {
       className="w-full h-[90vh] bg-cover bg-center relative"
       style={{
         backgroundImage:
-          "linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.5) 100%), url('/placeholder.svg?height=1080&width=1920&query=elegant silver jewelry collection display')",
+          "linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.5) 100%), url('https://teal-parrot.s3.eu-north-1.amazonaws.com/website-images/landing-images-2/teal-parrot+(1).webp')",
       }}
     >
       <div className="container mx-auto h-full flex items-center justify-center px-4">

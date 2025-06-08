@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Loader2, Package, ShoppingBag } from "lucide-react"
 import { fetchUserOrders } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
+import { formatPrice } from "@/lib/utils"
 
 // Define the new order type based on the API response
 interface OrderItem {
@@ -172,7 +173,7 @@ export function OrderList() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-gray-500">Total Amount</p>
-                      <p className="font-medium">₹{order.totalPrice?.toFixed(2) || "0.00"}</p>
+                      <p className="font-medium">{formatPrice(order.totalPrice || 0)}</p>
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Shipping Address</p>
