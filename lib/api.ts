@@ -280,41 +280,10 @@ export async function deleteUserAddress(addressId: string): Promise<void> {
 // Order APIs
 export async function fetchUserOrders(userId: string): Promise<any[]> {
   try {
-    const data = await apiRequest<{ success: boolean; data: any[] }>(`/users/order/list?user=${userId}`)
+    const data = await apiRequest<{ success: boolean; data: { orders: any[] } }>(`/users/order/list?user=${userId}`)
 
-    // Get all product IDs from the orders to fetch complete details
-    const productIds = new Set<string>()
-    data.data.forEach((order) => {
-      order.items.forEach((item: any) => {
-        if (item.product && item.product._id) {
-          productIds.add(item.product._id)
-        }
-      })
-    })
-
-    // Fetch complete product details for all products in the orders
-    const productDetailsMap = await fetchCompleteProductDetails(Array.from(productIds))
-
-    // Enhance order items with complete product details
-    const enhancedOrders = data.data.map((order) => {
-      return {
-        ...order,
-        items: order.items.map((item: any) => {
-          if (item.product && item.product._id && productDetailsMap[item.product._id]) {
-            return {
-              ...item,
-              product: {
-                ...item.product,
-                ...productDetailsMap[item.product._id],
-              },
-            }
-          }
-          return item
-        }),
-      }
-    })
-
-    return enhancedOrders || []
+    // The new API response structure has orders nested in data.orders
+    return data.data.orders || []
   } catch (error) {
     console.error("Error fetching orders:", error)
     return []
@@ -562,4 +531,22 @@ export async function submitContactForm(formData: {
 export const getCurrentUserId = (): string => {
   const user = useAuthStore.getState().user
   return user?._id || ""
+}
+
+// Add the password update function
+export async function updateUserPassword(userId: string, oldPassword: string, newPassword: string): Promise<any> {
+  try {
+    const data = await apiRequest<{ success: boolean; data: any }>("/users/user/update", {
+      method: "PUT",
+      body: JSON.stringify({
+        userId,
+        oldPassword,
+        password: newPassword,
+      }),
+    })
+    return data
+  } catch (error) {
+    console.error("Error updating password:", error)
+    throw error
+  }
 }

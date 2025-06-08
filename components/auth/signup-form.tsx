@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { z } from "zod"
@@ -9,18 +9,41 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { motion } from "framer-motion"
 import { Form } from "@/components/ui/form"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, XCircle } from "lucide-react"
 import { registerUser, useAuthStore } from "@/lib/auth"
 import { AuthLayout } from "./auth-layout"
 import { AnimatedFormField } from "./animated-form-field"
 import { TRANSITION_NORMAL } from "@/lib/animation-config"
+
+// Password validation requirements
+const passwordRequirements = {
+  minLength: 8,
+  hasUppercase: /[A-Z]/,
+  hasLowercase: /[a-z]/,
+  hasNumber: /[0-9]/,
+  hasSpecial: /[!@#$%^&*]/,
+}
 
 const signupSchema = z
   .object({
     name: z.string().min(2, "Name must be at least 2 characters"),
     email: z.string().email("Please enter a valid email address"),
     phone: z.string().min(10, "Phone number must be at least 10 digits"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    password: z
+      .string()
+      .min(passwordRequirements.minLength, `Password must be at least ${passwordRequirements.minLength} characters`)
+      .refine((val) => passwordRequirements.hasUppercase.test(val), {
+        message: "Password must contain at least one uppercase letter",
+      })
+      .refine((val) => passwordRequirements.hasLowercase.test(val), {
+        message: "Password must contain at least one lowercase letter",
+      })
+      .refine((val) => passwordRequirements.hasNumber.test(val), {
+        message: "Password must contain at least one number",
+      })
+      .refine((val) => passwordRequirements.hasSpecial.test(val), {
+        message: "Password must contain at least one special character (!@#$%^&*)",
+      }),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -34,6 +57,20 @@ export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<boolean>(false)
+  const [passwordStrength, setPasswordStrength] = useState<{
+    minLength: boolean
+    hasUppercase: boolean
+    hasLowercase: boolean
+    hasNumber: boolean
+    hasSpecial: boolean
+  }>({
+    minLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSpecial: false,
+  })
+
   const router = useRouter()
   const login = useAuthStore((state) => state.login)
 
@@ -46,7 +83,32 @@ export function SignupForm() {
       password: "",
       confirmPassword: "",
     },
+    mode: "onChange",
   })
+
+  // Watch the password field to provide real-time feedback
+  const password = form.watch("password")
+
+  // Update password strength indicators in real-time
+  useEffect(() => {
+    if (password) {
+      setPasswordStrength({
+        minLength: password.length >= passwordRequirements.minLength,
+        hasUppercase: passwordRequirements.hasUppercase.test(password),
+        hasLowercase: passwordRequirements.hasLowercase.test(password),
+        hasNumber: passwordRequirements.hasNumber.test(password),
+        hasSpecial: passwordRequirements.hasSpecial.test(password),
+      })
+    } else {
+      setPasswordStrength({
+        minLength: false,
+        hasUppercase: false,
+        hasLowercase: false,
+        hasNumber: false,
+        hasSpecial: false,
+      })
+    }
+  }, [password])
 
   async function onSubmit(data: SignupFormValues) {
     setIsLoading(true)
@@ -74,6 +136,14 @@ export function SignupForm() {
       }
     }
   }
+
+  // Render a requirement indicator
+  const RequirementIndicator = ({ met, text }: { met: boolean; text: string }) => (
+    <div className="flex items-center gap-2 text-sm">
+      {met ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-gray-400" />}
+      <span className={met ? "text-green-700" : "text-gray-600"}>{text}</span>
+    </div>
+  )
 
   return (
     <AuthLayout title="Create an Account" subtitle="Join us to explore our exclusive collection" isLoginPage={false}>
@@ -127,15 +197,46 @@ export function SignupForm() {
             required
           />
 
-          <AnimatedFormField
-            form={form}
-            name="password"
-            label="Password"
-            placeholder="••••••••"
-            type="password"
-            index={3}
-            required
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, ...TRANSITION_NORMAL }}
+          >
+            <AnimatedFormField
+              form={form}
+              name="password"
+              label="Password"
+              placeholder="••••••••"
+              type="password"
+              index={3}
+              required
+            />
+
+            {/* Password requirements feedback */}
+            {form.getValues("password") && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                transition={{ duration: 0.3 }}
+                className="mt-2 p-3 bg-gray-50 rounded-md"
+              >
+                <p className="text-sm font-medium text-gray-700 mb-2">Password requirements:</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <RequirementIndicator
+                    met={passwordStrength.minLength}
+                    text={`At least ${passwordRequirements.minLength} characters`}
+                  />
+                  <RequirementIndicator met={passwordStrength.hasUppercase} text="At least one uppercase letter" />
+                  <RequirementIndicator met={passwordStrength.hasLowercase} text="At least one lowercase letter" />
+                  <RequirementIndicator met={passwordStrength.hasNumber} text="At least one number" />
+                  <RequirementIndicator
+                    met={passwordStrength.hasSpecial}
+                    text="At least one special character (!@#$%^&*)"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
 
           <AnimatedFormField
             form={form}
