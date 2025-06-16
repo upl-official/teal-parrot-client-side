@@ -36,14 +36,18 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
     // Prepare headers with authentication if token exists
     const headers: HeadersInit = {
       "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
+    }
+
+    // Only add Authorization header if token exists
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
     }
 
     // Log the request for debugging
     console.log(`Making API request to: ${API_BASE_URL}${endpoint}`, {
       method: options.method || "GET",
-      headers,
+      hasToken: !!token,
       body: options.body ? JSON.parse(options.body as string) : undefined,
     })
 
@@ -54,6 +58,15 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+
+      // Handle authentication errors specifically
+      if (response.status === 401) {
+        console.error("Authentication failed - clearing auth state")
+        // Clear the auth state if we get a 401
+        useAuthStore.getState().logout()
+        throw new Error("Authentication failed. Please log in again.")
+      }
+
       const error = new Error(errorData.message || `API request failed: ${response.statusText}`)
       // @ts-ignore - Add status code to error object
       error.statusCode = response.status
@@ -342,36 +355,103 @@ export async function createOrder(orderData: {
 // Cart APIs
 export async function fetchCartItems(userId: string): Promise<CartItem[]> {
   try {
-    const data = await apiRequest<{ success: boolean; data: { items: any[]; totalPrice: number } }>(
-      `/users/cart/list?userId=${userId}`,
-    )
+    console.log("Fetching cart items for userId:", userId)
 
-    // Extract product IDs from cart items
-    const productIds = data.data.items.map((item) => item.productId)
+    // Check if userId is valid
+    if (!userId) {
+      console.warn("fetchCartItems called with invalid userId")
+      return []
+    }
+
+    const data = await apiRequest<{ success: boolean; data: any }>(`/users/cart/list?userId=${userId}`)
+
+    console.log("Raw cart API response:", data)
+
+    // Handle different response structures
+    let cartItems = []
+    const responseData = data.data
+
+    // Handle various response formats
+    if (!responseData) {
+      console.warn("No data property in cart response")
+      return []
+    }
+
+    // Check if responseData has items property
+    if (responseData.items && Array.isArray(responseData.items)) {
+      cartItems = responseData.items
+    }
+    // Check if responseData is directly an array
+    else if (Array.isArray(responseData)) {
+      cartItems = responseData
+    }
+    // Check if it's an empty object or error response
+    else if (typeof responseData === "object" && Object.keys(responseData).length === 0) {
+      console.info("Cart is empty for user:", userId)
+      return []
+    }
+    // Handle single item response
+    else if (responseData.productId || responseData._id) {
+      cartItems = [responseData]
+    } else {
+      console.warn("Unexpected cart response format:", responseData)
+      return []
+    }
+
+    console.log("Processed cart items:", cartItems)
+
+    // If cart is empty, return empty array
+    if (!cartItems || cartItems.length === 0) {
+      console.info("No items in cart for user:", userId)
+      return []
+    }
+
+    // Extract product IDs from cart items, handling different field names
+    const productIds = cartItems.map((item: any) => item.productId || item.product?._id || item._id).filter(Boolean) // Remove any undefined/null values
+
+    console.log("Product IDs to fetch:", productIds)
+
+    // If no valid product IDs, return empty array
+    if (productIds.length === 0) {
+      console.warn("No valid product IDs found in cart items")
+      return []
+    }
 
     // Fetch complete product details for all products in the cart
     const productDetailsMap = await fetchCompleteProductDetails(productIds)
 
-    // Map the API response to our CartItem structure with enhanced product details
-    return (data.data.items || []).map((item) => {
-      const enhancedProduct = productDetailsMap[item.productId] || {
-        _id: item.productId,
-        name: item.name,
-        price: item.price,
-        description: item.description,
-        category: item.category,
-        material: item.material,
-        grade: item.grade,
-        images: [PLACEHOLDER_IMAGE],
-      }
+    console.log("Product details map:", productDetailsMap)
 
-      return {
-        product: enhancedProduct,
-        quantity: item.quantity,
-      }
-    })
+    // Map the API response to our CartItem structure with enhanced product details
+    return cartItems
+      .map((item: any) => {
+        const productId = item.productId || item.product?._id || item._id
+        const enhancedProduct = productDetailsMap[productId] || {
+          _id: productId || "unknown-id",
+          name: item.name || item.product?.name || "Product Name Unavailable",
+          price: item.price || item.product?.price || 0,
+          description: item.description || item.product?.description || "",
+          category: item.category || item.product?.category || "",
+          material: item.material || item.product?.material || "",
+          grade: item.grade || item.product?.grade || "",
+          images: item.images?.map(ensureFullImageUrl) ||
+            item.product?.images?.map(ensureFullImageUrl) || [PLACEHOLDER_IMAGE],
+        }
+
+        return {
+          product: enhancedProduct,
+          quantity: item.quantity || 1,
+        }
+      })
+      .filter((item) => item.product._id !== "unknown-id") // Filter out items with unknown product IDs
   } catch (error) {
     console.error("Error fetching cart items:", error)
+
+    // If it's an authentication error, don't return fallback data
+    if (error instanceof Error && error.message.includes("Authentication failed")) {
+      throw error
+    }
+
     return []
   }
 }

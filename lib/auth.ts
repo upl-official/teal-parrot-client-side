@@ -46,6 +46,8 @@ export async function registerUser(
   phone: string,
 ): Promise<{ user: User; token: string }> {
   try {
+    console.log("Making registration request with data:", { name, email, phone })
+
     const response = await fetch(`${API_BASE_URL}/users/auth/register`, {
       method: "POST",
       headers: {
@@ -54,21 +56,58 @@ export async function registerUser(
       body: JSON.stringify({ name, email, password, phone }),
     })
 
+    console.log("Registration response status:", response.status)
+
     if (!response.ok) {
       const errorData = await response.json()
+      console.error("Registration failed with error:", errorData)
       throw new Error(errorData.message || "Registration failed")
     }
 
     const data = await response.json()
+    console.log("Registration response data:", data)
 
     if (!data.success) {
       throw new Error(data.message || "Registration failed")
     }
 
-    // Return both user and token
+    // Handle different possible response structures
+    let user: User
+    let token: string
+
+    // Check various possible response structures
+    if (data.data) {
+      // Structure: { success: true, data: { user: {...}, token: "..." } }
+      user = data.data.user || data.data
+      token = data.data.token || data.data.accessToken || ""
+    } else {
+      // Structure: { success: true, user: {...}, token: "..." }
+      user = data.user
+      token = data.token || data.accessToken || ""
+    }
+
+    console.log("Extracted user and token:", {
+      user: user ? { id: user._id, name: user.name, email: user.email } : null,
+      hasToken: !!token,
+      tokenLength: token ? token.length : 0,
+    })
+
+    // Validate that we have the required data
+    if (!user || !user._id || !user.email) {
+      console.error("Invalid user data received:", user)
+      throw new Error("Registration successful but user data is incomplete. Please try logging in.")
+    }
+
+    // Token might not be provided in registration response for some APIs
+    // In that case, we'll proceed without token and user can login manually
+    if (!token) {
+      console.warn("No token received during registration. User will need to login manually.")
+      throw new Error("Registration successful! Please log in with your credentials.")
+    }
+
     return {
-      user: data.data.user,
-      token: data.data.token || "", // Add fallback in case token is not provided
+      user,
+      token,
     }
   } catch (error) {
     console.error("Registration error:", error)
@@ -152,6 +191,7 @@ interface AuthState {
   logout: () => void
   updateUser: (userData: Partial<User>) => void
   getToken: () => string | null
+  refreshAuth: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -160,16 +200,49 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       token: null,
       isAuthenticated: false,
-      login: (user, token) => set({ user, token, isAuthenticated: true }),
-      logout: () => set({ user: null, token: null, isAuthenticated: false }),
+      login: (user, token) => {
+        console.log("Auth store login called with:", { user: user?.name, token: token ? "present" : "missing" })
+        set({ user, token, isAuthenticated: !!token && !!user })
+      },
+      logout: () => {
+        console.log("Auth store logout called")
+        set({ user: null, token: null, isAuthenticated: false })
+      },
       updateUser: (userData) =>
         set((state) => ({
           user: state.user ? { ...state.user, ...userData } : null,
         })),
-      getToken: () => get().token,
+      getToken: () => {
+        const token = get().token
+        console.log("Getting token from auth store:", token ? "present" : "missing")
+        return token
+      },
+      refreshAuth: async () => {
+        const state = get()
+        if (state.user && state.token) {
+          try {
+            // Verify the token is still valid by fetching user profile
+            const updatedUser = await getUserProfile(state.user._id, state.token)
+            set({ user: updatedUser })
+          } catch (error) {
+            console.error("Token validation failed, logging out:", error)
+            set({ user: null, token: null, isAuthenticated: false })
+          }
+        }
+      },
     }),
     {
       name: "teal-parrot-auth",
+      // Add custom storage to ensure proper hydration
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          console.log("Auth store rehydrated:", {
+            user: state.user?.name,
+            token: state.token ? "present" : "missing",
+            isAuthenticated: state.isAuthenticated,
+          })
+        }
+      },
     },
   ),
 )
@@ -182,12 +255,22 @@ export const getCurrentUserId = (): string => {
 
 // Helper function to get the authentication token
 export const getAuthToken = (): string | null => {
-  return useAuthStore.getState().token
+  const token = useAuthStore.getState().token
+  console.log("getAuthToken called, token:", token ? "present" : "missing")
+  return token
 }
 
 // Helper function to check if user is authenticated
 export const isAuthenticated = (): boolean => {
-  return useAuthStore.getState().isAuthenticated
+  const state = useAuthStore.getState()
+  const authenticated = state.isAuthenticated && !!state.token && !!state.user
+  console.log("isAuthenticated check:", {
+    isAuthenticated: state.isAuthenticated,
+    hasToken: !!state.token,
+    hasUser: !!state.user,
+    result: authenticated,
+  })
+  return authenticated
 }
 
 /**

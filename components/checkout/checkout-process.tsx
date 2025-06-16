@@ -26,6 +26,7 @@ export function CheckoutProcess() {
   const [selectedShipping, setSelectedShipping] = useState<string>("standard")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [processingPayment, setProcessingPayment] = useState(false)
   const [redirectingToPayment, setRedirectingToPayment] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
@@ -41,7 +42,10 @@ export function CheckoutProcess() {
   const shippingCost = selectedShipping === "express" ? 150 : selectedShipping === "standard" ? 50 : 0
 
   // Calculate subtotal
-  const subtotal = cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0)
+  const subtotal =
+    directPurchase && directPurchase.product
+      ? directPurchase.product.price * directPurchase.quantity
+      : cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0)
 
   // Calculate tax (5% of subtotal)
   const tax = Math.round(subtotal * 0.05)
@@ -151,9 +155,9 @@ export function CheckoutProcess() {
     }
   }
 
-  const handlePlaceOrderAndRedirect = async () => {
+  const handlePlaceOrder = async () => {
     try {
-      setRedirectingToPayment(true)
+      setProcessingPayment(true)
       const userId = getCurrentUserId()
 
       if (!userId || !selectedAddress) {
@@ -162,7 +166,7 @@ export function CheckoutProcess() {
           description: "Missing required information to place order",
           variant: "destructive",
         })
-        setRedirectingToPayment(false)
+        setProcessingPayment(false)
         return
       }
 
@@ -175,66 +179,47 @@ export function CheckoutProcess() {
           description: "Please log in again to continue",
           variant: "destructive",
         })
-        setRedirectingToPayment(false)
+        setProcessingPayment(false)
         router.push("/login?redirect=/checkout")
         return
       }
 
-      // Prepare order data according to the API requirements
+      // Prepare order data based on scenario
       const orderData: any = {
         userId,
         addressId: selectedAddress,
       }
 
-      // Handle direct purchase (Scenario 1)
+      // Scenario 1: Direct purchase (Buy Now)
       if (directPurchase) {
-        // Validate that we have the product data
         if (!directPurchase.product) {
           toast({
             title: "Error",
             description: "Product information is missing. Please try again.",
             variant: "destructive",
           })
-          setRedirectingToPayment(false)
+          setProcessingPayment(false)
           return
         }
 
         orderData.productId = directPurchase.productId
         orderData.quantity = directPurchase.quantity
 
-        console.log("Placing direct purchase order with data:", {
-          ...orderData,
-          productInfo: {
-            id: directPurchase.product._id,
-            name: directPurchase.product.name,
-            category: directPurchase.product.category,
-            price: directPurchase.product.price,
-          },
-        })
+        console.log("Placing direct purchase order with data:", orderData)
       }
-      // Handle cart checkout (Scenario 2)
+      // Scenario 2: Cart checkout
       else {
-        // Validate that we have cart items
         if (cartItems.length === 0) {
           toast({
             title: "Error",
             description: "Your cart is empty. Please add items to your cart.",
             variant: "destructive",
           })
-          setRedirectingToPayment(false)
+          setProcessingPayment(false)
           return
         }
 
-        console.log("Placing cart checkout order with data:", {
-          ...orderData,
-          cartItemsCount: cartItems.length,
-          cartItems: cartItems.map((item) => ({
-            id: item.product._id,
-            name: item.product.name,
-            quantity: item.quantity,
-            category: item.product.category,
-          })),
-        })
+        console.log("Placing cart checkout order with data:", orderData)
       }
 
       // Call the API to place the order
@@ -268,7 +253,7 @@ export function CheckoutProcess() {
       }
 
       const data = await response.json()
-      console.log(data.paymentUrl)
+      console.log("Order placement response:", data)
 
       // Check API response success flag
       if (!data.success) {
@@ -281,25 +266,76 @@ export function CheckoutProcess() {
         throw new Error(errorMessage)
       }
 
-      // Check if we have a payment URL to redirect to
-      if (data.paymentUrl) {
-        // Show toast before redirecting
+      // Check if we have payment URL for direct redirect
+      if (data.data?.payment?.paymentUrl) {
+        setRedirectingToPayment(true)
+
         toast({
           title: "Order Placed Successfully",
           description: "Redirecting to payment gateway...",
         })
 
-        // Set a small timeout to allow the toast to be seen
+        console.log("Redirecting to payment URL:", data.data.payment.paymentUrl)
+
+        // Redirect to payment URL after a short delay
         setTimeout(() => {
-          // Redirect to payment URL
-          window.location.href = data.paymentUrl
+          window.location.href = data.data.payment.paymentUrl
         }, 1500)
 
         return
       }
 
-      // If no payment URL, show error
-      throw new Error("Payment URL not received from server")
+      // Check if we have payment request data for form submission
+      if (data.data?.payment?.paymentRequest) {
+        setRedirectingToPayment(true)
+
+        toast({
+          title: "Order Placed Successfully",
+          description: "Redirecting to payment gateway...",
+        })
+
+        // Create a form and submit to PayU gateway
+        const form = document.createElement("form")
+        form.method = "POST"
+        form.action = "https://test.payu.in/_payment"
+        form.style.display = "none"
+
+        const paymentData = data.data.payment.paymentRequest
+
+        // Add all required fields
+        const fields = {
+          key: paymentData.key,
+          txnid: paymentData.txnid,
+          amount: paymentData.amount,
+          productinfo: paymentData.productinfo,
+          firstname: paymentData.firstname,
+          email: paymentData.email,
+          phone: paymentData.phone,
+          surl: paymentData.surl,
+          furl: paymentData.furl,
+          hash: paymentData.hash,
+        }
+
+        Object.entries(fields).forEach(([key, value]) => {
+          const input = document.createElement("input")
+          input.type = "hidden"
+          input.name = key
+          input.value = value
+          form.appendChild(input)
+        })
+
+        document.body.appendChild(form)
+
+        // Submit form after a short delay
+        setTimeout(() => {
+          form.submit()
+        }, 1500)
+
+        return
+      }
+
+      // If no payment data, show error
+      throw new Error("Payment information not received from server")
     } catch (error) {
       console.error("Error placing order:", error)
       toast({
@@ -307,6 +343,7 @@ export function CheckoutProcess() {
         description: error instanceof Error ? error.message : "Failed to place order. Please try again.",
         variant: "destructive",
       })
+      setProcessingPayment(false)
       setRedirectingToPayment(false)
     }
   }
@@ -324,7 +361,7 @@ export function CheckoutProcess() {
       <div className="container mx-auto px-4 py-16 flex flex-col justify-center items-center min-h-[60vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500 mb-4"></div>
         <h2 className="text-xl font-semibold mb-2">Processing Your Order</h2>
-        <p className="text-gray-600 text-center">
+        <p className="text-gray-600 text-center mb-4">
           Please wait while we process your order and redirect you to the payment gateway...
         </p>
         <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md">
@@ -485,8 +522,9 @@ export function CheckoutProcess() {
                   setSelectedAddress={setSelectedAddress}
                   selectedShipping={selectedShipping}
                   setSelectedShipping={setSelectedShipping}
-                  onNext={handlePlaceOrderAndRedirect}
+                  onNext={handlePlaceOrder}
                   onPrevious={handlePreviousStep}
+                  isProcessing={processingPayment}
                 />
               </motion.div>
             )}
@@ -548,46 +586,25 @@ export function CheckoutProcess() {
               )}
             </motion.div>
 
-            {(!directPurchase || directPurchase.product) && (
-              <>
-                <div className="space-y-2 py-4 border-t border-b border-gray-200">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="font-medium">
-                      ₹
-                      {directPurchase && directPurchase.product
-                        ? directPurchase.product.price * directPurchase.quantity
-                        : subtotal}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Shipping</span>
-                    <span className="font-medium">₹{shippingCost}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tax (5%)</span>
-                    <span className="font-medium">
-                      ₹
-                      {directPurchase && directPurchase.product
-                        ? Math.round(directPurchase.product.price * directPurchase.quantity * 0.05)
-                        : tax}
-                    </span>
-                  </div>
-                </div>
+            <div className="space-y-2 py-4 border-t border-b border-gray-200">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Subtotal</span>
+                <span className="font-medium">₹{subtotal}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Shipping</span>
+                <span className="font-medium">₹{shippingCost}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tax (5%)</span>
+                <span className="font-medium">₹{tax}</span>
+              </div>
+            </div>
 
-                <div className="flex justify-between pt-4 text-lg font-semibold">
-                  <span>Total</span>
-                  <span className="text-teal-600">
-                    ₹
-                    {directPurchase && directPurchase.product
-                      ? directPurchase.product.price * directPurchase.quantity +
-                        shippingCost +
-                        Math.round(directPurchase.product.price * directPurchase.quantity * 0.05)
-                      : total}
-                  </span>
-                </div>
-              </>
-            )}
+            <div className="flex justify-between pt-4 text-lg font-semibold">
+              <span>Total</span>
+              <span className="text-teal-600">₹{total}</span>
+            </div>
 
             <div className="mt-6 space-y-4">
               <div className="flex items-center text-sm text-gray-500">

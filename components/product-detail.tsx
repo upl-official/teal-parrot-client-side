@@ -50,6 +50,16 @@ import { useAuthStore } from "@/lib/auth"
 import { formatPrice } from "@/lib/utils"
 import { SimilarProducts } from "@/components/similar-products"
 
+// Define the SizeVariant type
+interface SizeVariant {
+  id: string
+  size: string
+  price: number
+  originalPrice?: number
+  stock: number
+  images: string[]
+}
+
 // Default placeholder image path
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
 
@@ -249,13 +259,19 @@ function formatInlineStyles(text: string): React.ReactNode[] {
   }
 }
 
-interface SizeVariant {
-  id: string
-  size: string
-  price: number
-  originalPrice?: number
-  stock: number
-  images?: string[]
+// Helper function to calculate distance between two touch points
+const getTouchDistance = (touch1: Touch, touch2: Touch) => {
+  const dx = touch1.clientX - touch2.clientX
+  const dy = touch1.clientY - touch2.clientY
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
+// Helper function to get center point between two touches
+const getTouchCenter = (touch1: Touch, touch2: Touch) => {
+  return {
+    x: (touch1.clientX + touch2.clientX) / 2,
+    y: (touch1.clientY + touch2.clientY) / 2,
+  }
 }
 
 export function ProductDetail({ productId }: { productId: string }) {
@@ -278,6 +294,14 @@ export function ProductDetail({ productId }: { productId: string }) {
   const imageRef = useRef<HTMLDivElement>(null)
   const isMobile = useMediaQuery("(max-width: 768px)")
 
+  // Enhanced mobile zoom states
+  const [mobileZoomScale, setMobileZoomScale] = useState(1)
+  const [mobileZoomPosition, setMobileZoomPosition] = useState({ x: 0, y: 0 })
+  const [isPinching, setIsPinching] = useState(false)
+  const [lastPinchDistance, setLastPinchDistance] = useState(0)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const zoomContainerRef = useRef<HTMLDivElement>(null)
+
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [addedToCart, setAddedToCart] = useState(false)
 
@@ -291,6 +315,32 @@ export function ProductDetail({ productId }: { productId: string }) {
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Reset zoom state
+  const resetZoom = () => {
+    setMobileZoomScale(1)
+    setMobileZoomPosition({ x: 0, y: 0 })
+    setIsPinching(false)
+    setLastPinchDistance(0)
+  }
+
+  // Navigate to next/previous image
+  const navigateImage = (direction: "next" | "prev") => {
+    if (!selectedSizeVariant?.images || selectedSizeVariant.images.length <= 1) return
+
+    const currentIndex = selectedSizeVariant.images.indexOf(mainImage)
+    let newIndex
+
+    if (direction === "next") {
+      newIndex = currentIndex < selectedSizeVariant.images.length - 1 ? currentIndex + 1 : 0
+    } else {
+      newIndex = currentIndex > 0 ? currentIndex - 1 : selectedSizeVariant.images.length - 1
+    }
+
+    setMainImage(selectedSizeVariant.images[newIndex])
+    setCurrentImageIndex(newIndex)
+    resetZoom() // Reset zoom when changing images
+  }
 
   // Fetch the main product and its size variants
   useEffect(() => {
@@ -740,25 +790,74 @@ export function ProductDetail({ productId }: { productId: string }) {
       // Close the address dialog
       setShowAddressDialog(false)
 
-      // Check if we have a payment URL to redirect to
-      if (data.paymentUrl) {
+      // Check if we have payment URL for direct redirect
+      if (data.data?.payment?.paymentUrl) {
         // Show toast before redirecting
         toast({
           title: "Order Placed Successfully",
           description: "Redirecting to payment gateway...",
         })
 
-        // Set a small timeout to allow the toast to be seen
+        console.log("Redirecting to payment URL:", data.data.payment.paymentUrl)
+
+        // Set a small timeout to allow the toast to be seen, then redirect
         setTimeout(() => {
-          // Redirect to payment URL
-          window.location.href = data.paymentUrl
+          window.location.href = data.data.payment.paymentUrl
         }, 1500)
 
         return
       }
 
-      // If no payment URL, show error
-      throw new Error("Payment URL not received from server")
+      // Check if we have payment request data for form submission (fallback)
+      if (data.data?.payment?.paymentRequest) {
+        // Show toast before redirecting
+        toast({
+          title: "Order Placed Successfully",
+          description: "Redirecting to payment gateway...",
+        })
+
+        // Create a form and submit to PayU gateway
+        const form = document.createElement("form")
+        form.method = "POST"
+        form.action = "https://test.payu.in/_payment"
+        form.style.display = "none"
+
+        const paymentData = data.data.payment.paymentRequest
+
+        // Add all required fields
+        const fields = {
+          key: paymentData.key,
+          txnid: paymentData.txnid,
+          amount: paymentData.amount,
+          productinfo: paymentData.productinfo,
+          firstname: paymentData.firstname,
+          email: paymentData.email,
+          phone: paymentData.phone,
+          surl: paymentData.surl,
+          furl: paymentData.furl,
+          hash: paymentData.hash,
+        }
+
+        Object.entries(fields).forEach(([key, value]) => {
+          const input = document.createElement("input")
+          input.type = "hidden"
+          input.name = key
+          input.value = value
+          form.appendChild(input)
+        })
+
+        document.body.appendChild(form)
+
+        // Set a small timeout to allow the toast to be seen
+        setTimeout(() => {
+          form.submit()
+        }, 1500)
+
+        return
+      }
+
+      // If no payment data, show error
+      throw new Error("Payment information not received from server")
     } catch (error) {
       console.error("Error placing direct order:", error)
       toast({
@@ -823,6 +922,145 @@ export function ProductDetail({ productId }: { productId: string }) {
     }
   }
 
+  // Enhanced touch handling for mobile zoom
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null)
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null)
+  const [lastTap, setLastTap] = useState<number>(0)
+
+  // Enhanced touch handlers for pinch-to-zoom
+  const handleTouchStartEnhanced = (e: React.TouchEvent) => {
+    e.preventDefault()
+
+    if (e.touches.length === 1) {
+      // Single touch - prepare for pan
+      const touch = e.touches[0]
+      setTouchStart({ x: touch.clientX, y: touch.clientY })
+
+      // Handle double tap
+      const now = Date.now()
+      const timeDiff = now - lastTap
+      if (timeDiff < 300 && timeDiff > 0) {
+        // Double tap to zoom
+        if (mobileZoomScale === 1) {
+          setMobileZoomScale(2)
+        } else {
+          resetZoom()
+        }
+      }
+      setLastTap(now)
+    } else if (e.touches.length === 2) {
+      // Two touches - start pinch
+      setIsPinching(true)
+      const distance = getTouchDistance(e.touches[0], e.touches[1])
+      setLastPinchDistance(distance)
+    }
+  }
+
+  const handleTouchMoveEnhanced = (e: React.TouchEvent) => {
+    e.preventDefault()
+
+    if (e.touches.length === 1 && !isPinching && mobileZoomScale > 1) {
+      // Single touch pan when zoomed
+      if (touchStart) {
+        const touch = e.touches[0]
+        const deltaX = touch.clientX - touchStart.x
+        const deltaY = touch.clientY - touchStart.y
+
+        // Calculate boundaries to prevent panning outside image
+        const maxPanX = (mobileZoomScale - 1) * 150
+        const maxPanY = (mobileZoomScale - 1) * 150
+
+        const newX = Math.max(-maxPanX, Math.min(maxPanX, mobileZoomPosition.x + deltaX * 0.5))
+        const newY = Math.max(-maxPanY, Math.min(maxPanY, mobileZoomPosition.y + deltaY * 0.5))
+
+        setMobileZoomPosition({ x: newX, y: newY })
+        setTouchStart({ x: touch.clientX, y: touch.clientY })
+      }
+    } else if (e.touches.length === 2 && isPinching) {
+      // Two touches - pinch to zoom
+      const distance = getTouchDistance(e.touches[0], e.touches[1])
+      const scale = distance / lastPinchDistance
+
+      const newScale = Math.max(1, Math.min(4, mobileZoomScale * scale))
+      setMobileZoomScale(newScale)
+      setLastPinchDistance(distance)
+
+      // Reset position if zoomed out completely
+      if (newScale === 1) {
+        setMobileZoomPosition({ x: 0, y: 0 })
+      }
+    }
+  }
+
+  const handleTouchEndEnhanced = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) {
+      setIsPinching(false)
+      setTouchStart(null)
+      setTouchEnd(null)
+    } else if (e.touches.length === 1 && isPinching) {
+      // Transition from pinch to single touch
+      setIsPinching(false)
+      const touch = e.touches[0]
+      setTouchStart({ x: touch.clientX, y: touch.clientY })
+    }
+  }
+
+  const handleTouchStartMobile = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0]
+      setTouchStart({ x: touch.clientX, y: touch.clientY })
+
+      // Handle double tap to zoom
+      const now = Date.now()
+      const timeDiff = now - lastTap
+      if (timeDiff < 300 && timeDiff > 0) {
+        // Double tap detected
+        setIsZoomed(!isZoomed)
+      }
+      setLastTap(now)
+    }
+  }
+
+  const handleTouchEndMobile = (e: React.TouchEvent) => {
+    if (!touchStart) return
+
+    const touch = e.changedTouches[0]
+    setTouchEnd({ x: touch.clientX, y: touch.clientY })
+
+    // Handle swipe gestures for image navigation
+    if (selectedSizeVariant?.images && selectedSizeVariant.images.length > 1) {
+      const deltaX = touch.clientX - touchStart.x
+      const deltaY = touch.clientY - touchStart.y
+
+      // Only process horizontal swipes
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
+        const currentIndex = selectedSizeVariant.images.indexOf(mainImage)
+        if (deltaX > 0 && currentIndex > 0) {
+          // Swipe right - previous image
+          setMainImage(selectedSizeVariant.images[currentIndex - 1])
+        } else if (deltaX < 0 && currentIndex < selectedSizeVariant.images.length - 1) {
+          // Swipe left - next image
+          setMainImage(selectedSizeVariant.images[currentIndex + 1])
+        }
+      }
+    }
+
+    setTouchStart(null)
+    setTouchEnd(null)
+  }
+
+  // Add this useEffect after the existing useEffects
+  useEffect(() => {
+    if (showZoomModal) {
+      resetZoom()
+      // Set current image index
+      if (selectedSizeVariant?.images) {
+        const index = selectedSizeVariant.images.indexOf(mainImage)
+        setCurrentImageIndex(index >= 0 ? index : 0)
+      }
+    }
+  }, [showZoomModal, mainImage, selectedSizeVariant?.images])
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-16 flex justify-center items-center min-h-[60vh]">
@@ -886,7 +1124,7 @@ export function ProductDetail({ productId }: { productId: string }) {
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
           {/* Product Images */}
-          <div className="space-y-6">
+          <div className="space-y-0">
             {/* Main Image with Zoom */}
             <div className="aspect-square overflow-hidden rounded-lg relative border border-gray-200">
               {/* Regular image view */}
@@ -897,8 +1135,8 @@ export function ProductDetail({ productId }: { productId: string }) {
                 onMouseEnter={() => !isMobile && setIsZoomed(true)}
                 onMouseLeave={() => !isMobile && setIsZoomed(false)}
                 onTouchMove={handleTouchMove}
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
+                onTouchStart={handleTouchStartMobile}
+                onTouchEnd={handleTouchEndMobile}
                 onClick={isMobile ? toggleZoomModal : undefined}
               >
                 <AnimatePresence mode="wait">
@@ -913,7 +1151,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                     <Image
                       src={
                         getImageSrc(mainImage) ||
-                        (selectedSizeVariant.images && selectedSizeVariant.images.length > 0
+                        (selectedSizeVariant?.images && selectedSizeVariant.images.length > 0
                           ? getImageSrc(selectedSizeVariant.images[0])
                           : PLACEHOLDER_IMAGE)
                       }
@@ -948,7 +1186,7 @@ export function ProductDetail({ productId }: { productId: string }) {
                       style={{
                         backgroundImage: `url(${
                           getImageSrc(mainImage) ||
-                          (selectedSizeVariant.images && selectedSizeVariant.images.length > 0
+                          (selectedSizeVariant?.images && selectedSizeVariant.images.length > 0
                             ? getImageSrc(selectedSizeVariant.images[0])
                             : PLACEHOLDER_IMAGE)
                         })`,
@@ -970,15 +1208,18 @@ export function ProductDetail({ productId }: { productId: string }) {
                   <ZoomIn className="h-5 w-5 text-gray-700" />
                 </motion.div>
 
-                {/* Instructions for mobile */}
+                {/* Enhanced Instructions for mobile */}
                 {isMobile && (
                   <motion.div
-                    className="absolute bottom-4 left-4 right-16 bg-black/60 text-white px-3 py-2 rounded-md text-xs"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
+                    className="absolute bottom-4 left-4 right-16 bg-black/70 backdrop-blur-sm text-white px-3 py-2 rounded-lg text-xs"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5, duration: 0.3 }}
                   >
-                    Tap to zoom
+                    <div className="flex items-center space-x-2">
+                      <ZoomIn className="h-3 w-3" />
+                      <span>Tap to zoom • Double tap for quick zoom</span>
+                    </div>
                   </motion.div>
                 )}
               </div>
@@ -1006,7 +1247,7 @@ export function ProductDetail({ productId }: { productId: string }) {
               )}
             </div>
 
-            {/* Zoom Modal for Mobile */}
+            {/* Enhanced Zoom Modal for Mobile */}
             <AnimatePresence>
               {showZoomModal && isMobile && (
                 <motion.div
@@ -1014,27 +1255,159 @@ export function ProductDetail({ productId }: { productId: string }) {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="fixed inset-0 bg-black/90 z-50 flex flex-col"
+                  className="fixed inset-0 bg-black z-[70] flex flex-col"
+                  onTouchStart={(e) => e.stopPropagation()}
                 >
-                  <div className="flex justify-end p-4">
-                    <button onClick={toggleZoomModal} className="text-white p-2 rounded-full bg-gray-800/50">
-                      <X className="h-6 w-6" />
+                  {/* Fixed Header */}
+                  <div className="fixed top-0 left-0 right-0 z-10 flex justify-between items-center p-4 bg-black/90 backdrop-blur-sm">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                        <ZoomIn className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-white font-medium text-sm truncate max-w-[200px]">{product.name}</h3>
+                        <p className="text-white/70 text-xs">
+                          {selectedSizeVariant?.images ? selectedSizeVariant.images.indexOf(mainImage) + 1 : 1} of{" "}
+                          {selectedSizeVariant?.images?.length || 1}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        toggleZoomModal()
+                        resetZoom()
+                      }}
+                      className="w-12 h-12 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
+                      aria-label="Close zoom view"
+                    >
+                      <X className="h-6 w-6 text-white" />
                     </button>
                   </div>
-                  <div className="flex-1 overflow-auto touch-pan-y" onTouchMove={handleTouchMove}>
-                    <div className="w-full h-full min-h-[80vh] relative flex items-center justify-center">
-                      <Image
-                        src={
-                          getImageSrc(mainImage) ||
-                          (selectedSizeVariant.images && selectedSizeVariant.images.length > 0
-                            ? getImageSrc(selectedSizeVariant.images[0])
-                            : PLACEHOLDER_IMAGE)
-                        }
-                        alt={product.name || "Product Image"}
-                        width={1200}
-                        height={1200}
-                        className="max-w-none object-contain max-h-full"
-                      />
+
+                  {/* Main Image Container with Pinch-to-Zoom */}
+                  <div
+                    ref={zoomContainerRef}
+                    className="flex-1 relative overflow-hidden mt-16 mb-20"
+                    style={{ touchAction: "none" }}
+                  >
+                    <div
+                      className="w-full h-full flex items-center justify-center"
+                      onTouchStart={handleTouchStartEnhanced}
+                      onTouchMove={handleTouchMoveEnhanced}
+                      onTouchEnd={handleTouchEndEnhanced}
+                    >
+                      <div
+                        className="relative transition-transform duration-200 ease-out"
+                        style={{
+                          transform: `scale(${mobileZoomScale}) translate(${mobileZoomPosition.x}px, ${mobileZoomPosition.y}px)`,
+                          transformOrigin: "center center",
+                        }}
+                      >
+                        <Image
+                          src={
+                            getImageSrc(mainImage) ||
+                            (selectedSizeVariant?.images && selectedSizeVariant.images.length > 0
+                              ? getImageSrc(selectedSizeVariant.images[0])
+                              : PLACEHOLDER_IMAGE)
+                          }
+                          alt={product.name || "Product Image"}
+                          width={1200}
+                          height={1200}
+                          className="max-w-none object-contain w-auto h-auto"
+                          style={{
+                            maxWidth: "90vw",
+                            maxHeight: "calc(100vh - 200px)",
+                          }}
+                          priority
+                        />
+                      </div>
+                    </div>
+
+                    {/* Navigation Arrows */}
+                    {selectedSizeVariant?.images && selectedSizeVariant.images.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => navigateImage("prev")}
+                          className="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
+                          aria-label="Previous image"
+                        >
+                          <ChevronRight className="h-6 w-6 text-white rotate-180" />
+                        </button>
+                        <button
+                          onClick={() => navigateImage("next")}
+                          className="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-200 active:scale-95"
+                          aria-label="Next image"
+                        >
+                          <ChevronRight className="h-6 w-6 text-white" />
+                        </button>
+                      </>
+                    )}
+
+                    {/* Zoom Level Indicator */}
+                    {mobileZoomScale > 1 && (
+                      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-1">
+                        <span className="text-white text-sm font-medium">{mobileZoomScale.toFixed(1)}x</span>
+                      </div>
+                    )}
+
+                    {/* Image Navigation Dots */}
+                    {selectedSizeVariant?.images && selectedSizeVariant.images.length > 1 && (
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+                        <div className="flex space-x-2 bg-black/60 backdrop-blur-sm rounded-full px-3 py-2">
+                          {selectedSizeVariant.images.map((image, index) => (
+                            <button
+                              key={index}
+                              onClick={() => {
+                                setMainImage(image)
+                                setCurrentImageIndex(index)
+                                resetZoom()
+                              }}
+                              className={`w-2 h-2 rounded-full transition-all duration-200 ${
+                                mainImage === image ? "bg-white scale-125" : "bg-white/50 hover:bg-white/70"
+                              }`}
+                              aria-label={`View image ${index + 1}`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Fixed Footer */}
+                  <div className="fixed bottom-0 left-0 right-0 z-10 bg-black/90 backdrop-blur-sm p-4 space-y-3">
+                    {/* Zoom Instructions */}
+                    <div className="text-center">
+                      <p className="text-white/70 text-xs">
+                        {mobileZoomScale === 1
+                          ? "Pinch to zoom • Double tap to zoom • Swipe for next image"
+                          : "Drag to pan • Pinch to zoom out • Double tap to reset"}
+                      </p>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className="flex justify-center space-x-4">
+                      <button
+                        onClick={() => {
+                          toggleZoomModal()
+                          resetZoom()
+                          handleAddToCart()
+                        }}
+                        className="flex-1 bg-teal-500 hover:bg-teal-600 text-white py-3 px-4 rounded-lg font-medium transition-colors duration-200 active:scale-95 disabled:opacity-50"
+                        disabled={selectedSizeVariant.stock <= 0}
+                      >
+                        <ShoppingCart className="w-4 h-4 mr-2 inline" />
+                        Add to Cart
+                      </button>
+                      <button
+                        onClick={() => {
+                          toggleZoomModal()
+                          resetZoom()
+                          handleAddToWishlist()
+                        }}
+                        className="bg-white/20 hover:bg-white/30 text-white py-3 px-4 rounded-lg transition-colors duration-200 active:scale-95"
+                      >
+                        <Heart className="w-5 h-5" />
+                      </button>
                     </div>
                   </div>
                 </motion.div>
@@ -1042,7 +1415,7 @@ export function ProductDetail({ productId }: { productId: string }) {
             </AnimatePresence>
 
             {/* Thumbnail Gallery */}
-            {selectedSizeVariant.images && selectedSizeVariant.images.length > 0 && (
+            {selectedSizeVariant?.images && selectedSizeVariant.images.length > 0 && (
               <motion.div
                 className="grid grid-cols-4 gap-4"
                 initial={{ opacity: 0, y: 20 }}

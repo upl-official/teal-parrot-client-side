@@ -202,3 +202,6 @@ export function ShippingAddress({
     </div>
   )
 }
+
+// Also export as default for backward compatibility
+export default ShippingAddress

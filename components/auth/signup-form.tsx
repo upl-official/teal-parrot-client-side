@@ -9,10 +9,11 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { motion } from "framer-motion"
 import { Form } from "@/components/ui/form"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, CheckCircle2, XCircle } from "lucide-react"
+import { AlertCircle, CheckCircle2, XCircle, Info } from "lucide-react"
 import { registerUser, useAuthStore } from "@/lib/auth"
 import { AuthLayout } from "./auth-layout"
 import { AnimatedFormField } from "./animated-form-field"
+import { DuplicateUserAlert } from "./duplicate-user-alert"
 import { TRANSITION_NORMAL } from "@/lib/animation-config"
 
 // Password validation requirements
@@ -57,6 +58,9 @@ export function SignupForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<boolean>(false)
+  const [needsLogin, setNeedsLogin] = useState<boolean>(false)
+  const [isDuplicateUser, setIsDuplicateUser] = useState<boolean>(false)
+  const [duplicateEmail, setDuplicateEmail] = useState<string>("")
   const [passwordStrength, setPasswordStrength] = useState<{
     minLength: boolean
     hasUppercase: boolean
@@ -110,30 +114,89 @@ export function SignupForm() {
     }
   }, [password])
 
+  // Clear duplicate user error when email changes
+  useEffect(() => {
+    if (isDuplicateUser) {
+      setIsDuplicateUser(false)
+      setDuplicateEmail("")
+      setError(null)
+    }
+  }, [form.watch("email")])
+
+  const handleTryDifferentEmail = () => {
+    setIsDuplicateUser(false)
+    setDuplicateEmail("")
+    setError(null)
+    // Focus on the email field
+    const emailField = document.querySelector('input[name="email"]') as HTMLInputElement
+    if (emailField) {
+      emailField.focus()
+      emailField.select()
+    }
+  }
+
   async function onSubmit(data: SignupFormValues) {
     setIsLoading(true)
     setError(null)
     setSuccess(false)
+    setNeedsLogin(false)
+    setIsDuplicateUser(false)
+    setDuplicateEmail("")
 
     try {
-      // Show success animation briefly before redirecting
+      console.log("Starting registration process...")
+
+      // Register the user
+      const result = await registerUser(data.name, data.email, data.password, data.phone)
+
+      console.log("Registration result:", {
+        hasUser: !!result.user,
+        hasToken: !!result.token,
+        userEmail: result.user?.email,
+      })
+
+      // Show success animation
       setSuccess(true)
 
-      // Updated to handle both user and token
-      const { user, token } = await registerUser(data.name, data.email, data.password, data.phone)
+      // If we have both user and token, log them in automatically
+      if (result.user && result.token) {
+        console.log("Auto-logging in user after registration...")
+        login(result.user, result.token)
 
-      // Short delay to show success state
-      setTimeout(() => {
-        login(user, token)
-        router.push("/account")
-      }, 1000)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed. Please try again.")
-      setSuccess(false)
-    } finally {
-      if (!success) {
-        setIsLoading(false)
+        setTimeout(() => {
+          router.push("/account")
+        }, 1500)
+      } else if (result.user) {
+        // If we only have user data but no token, show success but require manual login
+        console.log("Registration successful but no token received, requiring manual login...")
+        setNeedsLogin(true)
+
+        setTimeout(() => {
+          router.push("/login?message=Registration successful! Please log in with your credentials.")
+        }, 3000)
+      } else {
+        throw new Error("Registration failed - no user data received")
       }
+    } catch (err) {
+      console.error("Registration error:", err)
+      const errorMessage = err instanceof Error ? err.message : "Registration failed. Please try again."
+
+      // Check if this is a duplicate user error
+      if (errorMessage.includes("Duplicate User") || errorMessage.includes("already exists")) {
+        setIsDuplicateUser(true)
+        setDuplicateEmail(data.email)
+      } else if (errorMessage.includes("Please log in") || errorMessage.includes("successful")) {
+        // Check if this is a "please login" type message
+        setNeedsLogin(true)
+        setSuccess(true)
+        setTimeout(() => {
+          router.push("/login?message=" + encodeURIComponent(errorMessage))
+        }, 3000)
+      } else {
+        setError(errorMessage)
+      }
+
+      setIsLoading(false)
     }
   }
 
@@ -147,7 +210,11 @@ export function SignupForm() {
 
   return (
     <AuthLayout title="Create an Account" subtitle="Join us to explore our exclusive collection" isLoginPage={false}>
-      {error && (
+      {/* Duplicate User Alert */}
+      {isDuplicateUser && <DuplicateUserAlert email={duplicateEmail} onTryDifferentEmail={handleTryDifferentEmail} />}
+
+      {/* General Error Alert */}
+      {error && !isDuplicateUser && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -161,7 +228,8 @@ export function SignupForm() {
         </motion.div>
       )}
 
-      {success && (
+      {/* Success Alert - Auto Login */}
+      {success && !needsLogin && !isDuplicateUser && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -171,6 +239,23 @@ export function SignupForm() {
           <Alert className="bg-green-50 text-green-800 border-green-200">
             <CheckCircle2 className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">Account created successfully! Redirecting...</AlertDescription>
+          </Alert>
+        </motion.div>
+      )}
+
+      {/* Success Alert - Manual Login Required */}
+      {success && needsLogin && !isDuplicateUser && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={TRANSITION_NORMAL}
+          className="mb-6"
+        >
+          <Alert className="bg-blue-50 text-blue-800 border-blue-200">
+            <Info className="h-4 w-4 text-blue-600" />
+            <AlertDescription className="text-blue-800">
+              Account created successfully! Redirecting to login page...
+            </AlertDescription>
           </Alert>
         </motion.div>
       )}
@@ -266,7 +351,7 @@ export function SignupForm() {
                   {success ? (
                     <>
                       <CheckCircle2 className="mr-2 h-4 w-4" />
-                      Success!
+                      {needsLogin ? "Redirecting to login..." : "Success!"}
                     </>
                   ) : (
                     <>
