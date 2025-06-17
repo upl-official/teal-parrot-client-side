@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { PlusCircle, CheckCircle, Clock, Truck, Zap } from "lucide-react"
+import { PlusCircle, CheckCircle, Truck, Zap } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AddressForm } from "@/components/account/address-form"
 import type { Address } from "@/lib/types"
@@ -50,22 +50,15 @@ export function ShippingAddress({
     {
       id: "free",
       name: "Free Shipping",
-      description: "7-10 business days",
+      description: "10-14 business days",
       price: 0,
       icon: Truck,
     },
     {
-      id: "standard",
-      name: "Standard Shipping",
-      description: "3-5 business days",
-      price: 50,
-      icon: Clock,
-    },
-    {
       id: "express",
       name: "Express Shipping",
-      description: "1-2 business days",
-      price: 150,
+      description: "7 business days",
+      price: 100,
       icon: Zap,
     },
   ]

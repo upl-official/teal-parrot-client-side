@@ -1,68 +1,82 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
+import type React from "react"
+import { useState } from "react"
 
-interface PaymentRequest {
-  key: string
-  txnid: string
-  amount: string
-  productinfo: string
-  firstname: string
-  email: string
-  phone: string
-  surl: string
-  furl: string
-  hash: string
+// Placeholder for the actual API call
+const processPaymentAPI = async (paymentData: any) => {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      // Simulate a successful payment
+      if (Math.random() > 0.2) {
+        resolve({ success: true, message: "Payment successful", data: paymentData })
+      } else {
+        reject({ success: false, message: "Payment failed" })
+      }
+    }, 1000)
+  })
 }
 
 interface PaymentGatewayProps {
-  paymentRequest: PaymentRequest
-  onSuccess?: () => void
-  onFailure?: () => void
+  userId: string
+  addressId: string
+  productId?: string // For direct purchase
+  quantity?: number // For direct purchase
+  couponId?: string
+  shippingCost: number
+  totalAmount: number
+  onSuccess: (data: any) => void
+  onFailure: (error: any) => void
+  onBack: () => void
 }
 
-export function PaymentGateway({ paymentRequest, onSuccess, onFailure }: PaymentGatewayProps) {
-  const formRef = useRef<HTMLFormElement>(null)
-  const router = useRouter()
-  const { toast } = useToast()
+const PaymentGateway: React.FC<PaymentGatewayProps> = ({
+  userId,
+  addressId,
+  productId,
+  quantity,
+  couponId,
+  shippingCost,
+  totalAmount,
+  onSuccess,
+  onFailure,
+  onBack,
+}) => {
+  const [isProcessing, setIsProcessing] = useState(false)
 
-  useEffect(() => {
-    // Auto-submit the form when component mounts
-    if (formRef.current) {
-      formRef.current.submit()
+  const processPayment = async () => {
+    try {
+      setIsProcessing(true)
+
+      const paymentData = {
+        userId,
+        addressId,
+        ...(productId && { productId, quantity }),
+        ...(couponId && { couponId }),
+        shippingCost,
+        // Add other payment-specific fields as needed
+      }
+
+      // Process payment with the new structure
+      const result = await processPaymentAPI(paymentData)
+      onSuccess(result)
+    } catch (error) {
+      console.error("Payment processing failed:", error)
+      onFailure(error)
+    } finally {
+      setIsProcessing(false)
     }
-  }, [])
+  }
 
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
-      <div className="text-center mb-8">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-500 mx-auto mb-4"></div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Redirecting to Payment Gateway</h2>
-        <p className="text-gray-600">Please wait while we redirect you to complete your payment...</p>
-      </div>
-
-      {/* Hidden form for payment gateway submission */}
-      <form ref={formRef} action="https://test.payu.in/_payment" method="POST" className="hidden">
-        <input type="hidden" name="key" value={paymentRequest.key} />
-        <input type="hidden" name="txnid" value={paymentRequest.txnid} />
-        <input type="hidden" name="amount" value={paymentRequest.amount} />
-        <input type="hidden" name="productinfo" value={paymentRequest.productinfo} />
-        <input type="hidden" name="firstname" value={paymentRequest.firstname} />
-        <input type="hidden" name="email" value={paymentRequest.email} />
-        <input type="hidden" name="phone" value={paymentRequest.phone} />
-        <input type="hidden" name="surl" value={paymentRequest.surl} />
-        <input type="hidden" name="furl" value={paymentRequest.furl} />
-        <input type="hidden" name="hash" value={paymentRequest.hash} />
-      </form>
-
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-md">
-        <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Do not refresh or close this page. You will be redirected automatically to the payment
-          gateway.
-        </p>
-      </div>
+    <div>
+      <p>Total Amount: ${totalAmount}</p>
+      <button onClick={onBack}>Back</button>
+      <button onClick={processPayment} disabled={isProcessing}>
+        {isProcessing ? "Processing..." : "Pay Now"}
+      </button>
     </div>
   )
 }
+
+export default PaymentGateway

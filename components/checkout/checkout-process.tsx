@@ -2,15 +2,35 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { CheckCircle, ShoppingBag, Truck, CreditCard } from "lucide-react"
-import { fetchCartItems, getCurrentUserId, fetchUserAddresses, fetchProductById } from "@/lib/api"
+import {
+  CheckCircle,
+  ShoppingBag,
+  Truck,
+  CreditCard,
+  Tag,
+  Trash2,
+  AlertCircle,
+  CheckCircle2,
+  Minus,
+  Plus,
+} from "lucide-react"
+import {
+  fetchCartItems,
+  getCurrentUserId,
+  fetchUserAddresses,
+  fetchProductById,
+  validateCoupon,
+  updateCartItem,
+} from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { OrderReview } from "./order-review"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { ShippingAddress } from "./shipping-address"
-import type { CartItem, Address, Product } from "@/lib/types"
+import type { CartItem, Address, Product, Coupon, CouponValidationResult } from "@/lib/types"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuthStore } from "@/lib/auth"
+import { cn } from "@/lib/utils"
 
 const steps = [
   { id: "review", title: "Order Review", icon: ShoppingBag },
@@ -18,16 +38,28 @@ const steps = [
   { id: "payment", title: "Payment", icon: CreditCard },
 ]
 
-export function CheckoutProcess() {
+interface CheckoutProcessProps {
+  directProductId?: string | null
+  directQuantity?: number
+}
+
+export function CheckoutProcess({ directProductId, directQuantity }: CheckoutProcessProps) {
   const [currentStep, setCurrentStep] = useState("review")
   const [cartItems, setCartItems] = useState<CartItem[]>([])
   const [addresses, setAddresses] = useState<Address[]>([])
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null)
-  const [selectedShipping, setSelectedShipping] = useState<string>("standard")
+  const [selectedShipping, setSelectedShipping] = useState<string>("free")
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [processingPayment, setProcessingPayment] = useState(false)
   const [redirectingToPayment, setRedirectingToPayment] = useState(false)
+
+  // Coupon states
+  const [couponCode, setCouponCode] = useState("")
+  const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
+  const [couponValidationResult, setCouponValidationResult] = useState<CouponValidationResult | null>(null)
+  const [couponLoading, setCouponLoading] = useState(false)
+
   const { toast } = useToast()
   const router = useRouter()
 
@@ -39,7 +71,7 @@ export function CheckoutProcess() {
   } | null>(null)
 
   // Calculate shipping cost based on selected method
-  const shippingCost = selectedShipping === "express" ? 150 : selectedShipping === "standard" ? 50 : 0
+  const shippingCost = selectedShipping === "express" ? 100 : 0
 
   // Calculate subtotal
   const subtotal =
@@ -47,11 +79,11 @@ export function CheckoutProcess() {
       ? directPurchase.product.price * directPurchase.quantity
       : cartItems.reduce((total, item) => total + item.product.price * item.quantity, 0)
 
-  // Calculate tax (5% of subtotal)
-  const tax = Math.round(subtotal * 0.05)
+  // Calculate discount from coupon validation result
+  const discount = couponValidationResult?.isValid ? couponValidationResult.discountAmount || 0 : 0
 
   // Calculate total
-  const total = subtotal + tax + shippingCost
+  const total = subtotal - discount + shippingCost
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,7 +95,45 @@ export function CheckoutProcess() {
           return
         }
 
-        // Check if there's a direct purchase from URL params
+        // Check if there's a direct purchase from props or URL params
+        if (directProductId && directQuantity) {
+          try {
+            // Fetch the product details to validate it exists
+            const product = await fetchProductById(directProductId)
+
+            // This is a direct purchase from product page
+            setDirectPurchase({
+              productId: directProductId,
+              quantity: directQuantity,
+              product,
+            })
+
+            console.log("Direct purchase product loaded:", product)
+
+            // Skip loading cart items for direct purchase
+            // But still load addresses
+            const userAddresses = await fetchUserAddresses(userId)
+            setAddresses(userAddresses)
+
+            // Set default address if available
+            const defaultAddress = userAddresses.find((addr) => addr.isDefault)
+            if (defaultAddress) {
+              setSelectedAddress(defaultAddress._id)
+            } else if (userAddresses.length > 0) {
+              setSelectedAddress(userAddresses[0]._id)
+            }
+
+            setLoading(false)
+            return
+          } catch (productError) {
+            console.error("Error fetching product for direct purchase:", productError)
+            setError("Product not found. Please try again from the product page.")
+            setLoading(false)
+            return
+          }
+        }
+
+        // Check URL params as fallback
         if (typeof window !== "undefined") {
           const urlParams = new URLSearchParams(window.location.search)
           const productId = urlParams.get("productId")
@@ -137,7 +207,75 @@ export function CheckoutProcess() {
     }
 
     fetchData()
-  }, [])
+  }, [directProductId, directQuantity])
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponValidationResult({
+        isValid: false,
+        message: "Please enter a coupon code",
+      })
+      return
+    }
+
+    try {
+      setCouponLoading(true)
+      setCouponValidationResult(null)
+
+      // Prepare cart items for validation
+      const itemsForValidation =
+        directPurchase && directPurchase.product
+          ? [
+              {
+                product: directPurchase.product,
+                quantity: directPurchase.quantity,
+              },
+            ]
+          : cartItems
+
+      const validation = await validateCoupon(couponCode, subtotal, itemsForValidation)
+      setCouponValidationResult(validation)
+
+      if (validation.isValid && validation.coupon) {
+        setAppliedCoupon(validation.coupon)
+        setCouponCode("")
+        toast({
+          title: "Coupon Applied Successfully!",
+          description: validation.message,
+        })
+      } else {
+        setAppliedCoupon(null)
+        toast({
+          title: "Coupon Application Failed",
+          description: validation.message,
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error applying coupon:", error)
+      setCouponValidationResult({
+        isValid: false,
+        message: "Unable to validate coupon. Please try again later.",
+      })
+      toast({
+        title: "Error",
+        description: "Unable to validate coupon. Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setCouponLoading(false)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null)
+    setCouponValidationResult(null)
+    setCouponCode("")
+    toast({
+      title: "Coupon Removed",
+      description: "The coupon has been removed from your order.",
+    })
+  }
 
   const handleNextStep = () => {
     const currentIndex = steps.findIndex((step) => step.id === currentStep)
@@ -184,10 +322,19 @@ export function CheckoutProcess() {
         return
       }
 
-      // Prepare order data based on scenario
+      // Get selected address details
+      const selectedAddressDetails = addresses.find((addr) => addr._id === selectedAddress)
+
+      // Prepare order data based on scenario using the new API structure
       const orderData: any = {
         userId,
         addressId: selectedAddress,
+        shippingCost,
+      }
+
+      // Add coupon if applied
+      if (appliedCoupon) {
+        orderData.couponId = appliedCoupon._id
       }
 
       // Scenario 1: Direct purchase (Buy Now)
@@ -266,7 +413,102 @@ export function CheckoutProcess() {
         throw new Error(errorMessage)
       }
 
-      // Check if we have payment URL for direct redirect
+      // Check if we're in development mode and redirect to test page
+      const isDevelopment = process.env.NODE_ENV === "development" || window.location.hostname === "localhost"
+
+      if (isDevelopment) {
+        // Prepare comprehensive order data for test page
+        const testOrderData = {
+          orderId: data.data?.order?._id || `test-${Date.now()}`,
+          orderData: data.data,
+          paymentRequest: data.data?.payment?.paymentRequest,
+          // Enhanced order details for test page
+          orderDetails: {
+            shippingAddress: selectedAddressDetails || {
+              address: "Test Address",
+              city: "Test City",
+              state: "Test State",
+              pincode: "123456",
+            },
+            paymentDetails: {
+              transactionId: data.data?.payment?.paymentRequest?.txnid || `txn-${Date.now()}`,
+              paymentMethod: "PayU",
+              paymentDate: new Date().toISOString(),
+            },
+            items: directPurchase
+              ? [
+                  {
+                    product: {
+                      _id: directPurchase.productId,
+                      name: directPurchase.product?.name || "Product",
+                      price: directPurchase.product?.price || 0,
+                      image: directPurchase.product?.images?.[0] || "/images/tp-placeholder-img.jpg",
+                      category: directPurchase.product?.category || "General",
+                      material: directPurchase.product?.material || "Sterling Silver",
+                      grade: directPurchase.product?.grade || "925",
+                      gem: directPurchase.product?.gem || "Zircon",
+                      coating: directPurchase.product?.coating || "Rhodium Plated",
+                    },
+                    quantity: directPurchase.quantity,
+                    _id: `item-${Date.now()}`,
+                  },
+                ]
+              : cartItems.map((item, index) => ({
+                  product: {
+                    _id: item.product._id,
+                    name: item.product.name,
+                    price: item.product.price,
+                    image: item.product.images?.[0] || "/images/tp-placeholder-img.jpg",
+                    category: item.product.category,
+                    material: item.product.material,
+                    grade: item.product.grade,
+                    gem: item.product.gem,
+                    coating: item.product.coating,
+                  },
+                  quantity: item.quantity,
+                  _id: `item-${Date.now()}-${index}`,
+                })),
+            totalPrice: total,
+            status: "pending",
+            paymentStatus: "pending",
+            couponApplied: appliedCoupon
+              ? {
+                  couponId: appliedCoupon._id,
+                  discountAmount: discount,
+                  originalPrice: subtotal + shippingCost,
+                  couponType: appliedCoupon.type,
+                  eligibleProducts: [],
+                  _id: `coupon-${Date.now()}`,
+                }
+              : null,
+            shippingCost,
+            placedAt: new Date().toISOString(),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+        }
+
+        // Store order data in sessionStorage for the test page
+        sessionStorage.setItem("testOrderData", JSON.stringify(testOrderData))
+
+        setRedirectingToPayment(true)
+
+        toast({
+          title: "Order Placed Successfully",
+          description: "Redirecting to test payment page...",
+        })
+
+        console.log("Development mode detected, redirecting to test page with data:", testOrderData)
+
+        // Redirect to test page after a short delay
+        setTimeout(() => {
+          router.push("/payment/test")
+        }, 1500)
+
+        return
+      }
+
+      // Production flow - Check if we have payment URL for direct redirect
       if (data.data?.payment?.paymentUrl) {
         setRedirectingToPayment(true)
 
@@ -465,46 +707,222 @@ export function CheckoutProcess() {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
-                {directPurchase ? (
-                  // For direct purchase, show a simplified review
-                  <div className="bg-white p-6 rounded-lg border border-gray-200">
-                    <h2 className="text-xl font-semibold mb-4">Direct Purchase</h2>
-                    {directPurchase.product ? (
-                      <div className="mb-4">
-                        <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                          <img
-                            src={directPurchase.product.images[0] || "/images/tp-placeholder-img.jpg"}
-                            alt={directPurchase.product.name}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                          <div className="flex-1">
-                            <h3 className="font-medium">{directPurchase.product.name}</h3>
-                            <p className="text-sm text-gray-600">Quantity: {directPurchase.quantity}</p>
-                            <p className="text-sm font-medium">₹{directPurchase.product.price}</p>
+                <div className="bg-white p-6 rounded-lg border border-gray-200">
+                  <h2 className="text-xl font-semibold mb-4">{directPurchase ? "Direct Purchase" : "Order Review"}</h2>
+
+                  {/* Order Items with Quantity Controls */}
+                  <div className="space-y-4 mb-6">
+                    {directPurchase
+                      ? directPurchase.product && (
+                          <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                            <img
+                              src={directPurchase.product.images[0] || "/images/tp-placeholder-img.jpg"}
+                              alt={directPurchase.product.name}
+                              className="w-16 h-16 object-cover rounded"
+                            />
+                            <div className="flex-1">
+                              <h3 className="font-medium">{directPurchase.product.name}</h3>
+                              <p className="text-sm font-medium">₹{directPurchase.product.price}</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (directPurchase.quantity > 1) {
+                                    setDirectPurchase({
+                                      ...directPurchase,
+                                      quantity: directPurchase.quantity - 1,
+                                    })
+                                  }
+                                }}
+                                disabled={directPurchase.quantity <= 1}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <span className="w-12 text-center font-medium">{directPurchase.quantity}</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setDirectPurchase({
+                                    ...directPurchase,
+                                    quantity: directPurchase.quantity + 1,
+                                  })
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
+                        )
+                      : cartItems.map((item, index) => (
+                          <div key={index} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                            <img
+                              src={item.product.images[0] || "/images/tp-placeholder-img.jpg"}
+                              alt={item.product.name}
+                              className="w-16 h-16 object-cover rounded"
+                            />
+                            <div className="flex-1">
+                              <h3 className="font-medium">{item.product.name}</h3>
+                              <p className="text-sm font-medium">₹{item.product.price}</p>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  if (item.quantity > 1) {
+                                    const newQuantity = item.quantity - 1
+                                    try {
+                                      const userId = getCurrentUserId()
+                                      await updateCartItem(userId, item.product._id, newQuantity)
+                                      setCartItems((prev) =>
+                                        prev.map((cartItem) =>
+                                          cartItem.product._id === item.product._id
+                                            ? { ...cartItem, quantity: newQuantity }
+                                            : cartItem,
+                                        ),
+                                      )
+                                      toast({
+                                        title: "Quantity Updated",
+                                        description: "Item quantity has been decreased",
+                                      })
+                                    } catch (error) {
+                                      toast({
+                                        title: "Error",
+                                        description: "Failed to update quantity",
+                                        variant: "destructive",
+                                      })
+                                    }
+                                  }
+                                }}
+                                disabled={item.quantity <= 1}
+                              >
+                                <Minus className="h-4 w-4" />
+                              </Button>
+                              <span className="w-12 text-center font-medium">{item.quantity}</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={async () => {
+                                  const newQuantity = item.quantity + 1
+                                  try {
+                                    const userId = getCurrentUserId()
+                                    await updateCartItem(userId, item.product._id, newQuantity)
+                                    setCartItems((prev) =>
+                                      prev.map((cartItem) =>
+                                        cartItem.product._id === item.product._id
+                                          ? { ...cartItem, quantity: newQuantity }
+                                          : cartItem,
+                                      ),
+                                    )
+                                    toast({
+                                      title: "Quantity Updated",
+                                      description: "Item quantity has been increased",
+                                    })
+                                  } catch (error) {
+                                    toast({
+                                      title: "Error",
+                                      description: "Failed to update quantity",
+                                      variant: "destructive",
+                                    })
+                                  }
+                                }}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                  </div>
+
+                  {/* Coupon Section */}
+                  <div className="border-t border-gray-200 pt-6 mb-6">
+                    <h3 className="text-lg font-medium mb-4">Apply Coupon Code</h3>
+
+                    {appliedCoupon ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                            <div>
+                              <p className="font-medium text-green-800">{appliedCoupon.code}</p>
+                              <p className="text-sm text-green-600">
+                                {appliedCoupon.offerPercentage}% off •
+                                {appliedCoupon.type === "product"
+                                  ? " Applicable to specific products"
+                                  : " All products"}
+                              </p>
+                              {appliedCoupon.minimumOrderAmount > 0 && (
+                                <p className="text-xs text-green-600">
+                                  Min. order: ₹{appliedCoupon.minimumOrderAmount}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveCoupon}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
+                        {couponValidationResult?.message && (
+                          <Alert className="border-green-200 bg-green-50">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <AlertDescription className="text-green-800">
+                              {couponValidationResult.message}
+                            </AlertDescription>
+                          </Alert>
+                        )}
                       </div>
                     ) : (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                        <p className="text-sm text-blue-800">
-                          <strong>Product ID:</strong> {directPurchase.productId}
-                        </p>
-                        <p className="text-sm text-blue-800">
-                          <strong>Quantity:</strong> {directPurchase.quantity}
-                        </p>
+                      <div className="space-y-3">
+                        <div className="flex space-x-2">
+                          <Input
+                            placeholder="Enter coupon code"
+                            value={couponCode}
+                            onChange={(e) => {
+                              setCouponCode(e.target.value.toUpperCase())
+                              setCouponValidationResult(null)
+                            }}
+                            className={cn(
+                              couponValidationResult && !couponValidationResult.isValid && "border-red-300",
+                            )}
+                          />
+                          <Button
+                            onClick={handleApplyCoupon}
+                            disabled={couponLoading || !couponCode.trim()}
+                            className="whitespace-nowrap"
+                          >
+                            {couponLoading ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2" />
+                                Validating...
+                              </>
+                            ) : (
+                              "Apply Coupon"
+                            )}
+                          </Button>
+                        </div>
+
+                        {couponValidationResult && !couponValidationResult.isValid && (
+                          <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>{couponValidationResult.message}</AlertDescription>
+                          </Alert>
+                        )}
                       </div>
                     )}
-                    <button
-                      onClick={handleNextStep}
-                      className="w-full bg-teal-500 hover:bg-teal-600 text-white py-3 rounded-md font-medium"
-                    >
-                      Continue to Shipping
-                    </button>
                   </div>
-                ) : (
-                  // For cart checkout, show the regular order review
-                  <OrderReview cartItems={cartItems} onNext={handleNextStep} />
-                )}
+
+                  <Button onClick={handleNextStep} className="w-full bg-teal-500 hover:bg-teal-600 text-white">
+                    Continue to Shipping
+                  </Button>
+                </div>
               </motion.div>
             )}
 
@@ -591,13 +1009,15 @@ export function CheckoutProcess() {
                 <span className="text-gray-600">Subtotal</span>
                 <span className="font-medium">₹{subtotal}</span>
               </div>
+              {appliedCoupon && discount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount ({appliedCoupon.code})</span>
+                  <span>-₹{discount}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping</span>
                 <span className="font-medium">₹{shippingCost}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Tax (5%)</span>
-                <span className="font-medium">₹{tax}</span>
               </div>
             </div>
 
@@ -605,6 +1025,17 @@ export function CheckoutProcess() {
               <span>Total</span>
               <span className="text-teal-600">₹{total}</span>
             </div>
+
+            {appliedCoupon && (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center text-sm text-green-800">
+                  <Tag className="h-4 w-4 mr-2" />
+                  <span>
+                    You saved ₹{discount} with {appliedCoupon.code}!
+                  </span>
+                </div>
+              </div>
+            )}
 
             <div className="mt-6 space-y-4">
               <div className="flex items-center text-sm text-gray-500">

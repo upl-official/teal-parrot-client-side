@@ -31,7 +31,7 @@ export default function ShippingPolicyPage() {
               <section>
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">Shipping Charges</h3>
                 <ul className="list-disc list-inside text-gray-700 space-y-2">
-                  <li>Free shipping across India on orders above ₹2,000.</li>
+                  <li>Free shipping across India on orders above ���2,000.</li>
                   <li>A nominal fee applies to orders below ₹2,000 and is visible at checkout.</li>
                 </ul>
               </section>

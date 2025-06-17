@@ -10,6 +10,41 @@ const API_BASE_URL = "https://backend-project-r734.onrender.com/api/v1"
 // Default placeholder image path
 const PLACEHOLDER_IMAGE = "/images/tp-placeholder-img.jpg"
 
+// Add these interfaces at the top of the file
+export interface Coupon {
+  _id: string
+  code: string
+  offerPercentage: number
+  validFrom: string
+  validUntil: string
+  type: "normal" | "product"
+  minimumOrderAmount: number
+  isActive: boolean
+  applicableProducts: string | number
+  products?: Array<{
+    _id: string
+    name: string
+    price: number
+  }>
+}
+
+export interface CouponValidationResult {
+  isValid: boolean
+  coupon?: Coupon
+  message: string
+  discountAmount?: number
+}
+
+// Coupon validation response interface
+export interface CouponValidationResponse {
+  _id: string
+  code: string
+  discountType: "percentage" | "fixed"
+  discountValue: number
+  isValid: boolean
+  message?: string
+}
+
 // Helper function to ensure image URLs are complete
 function ensureFullImageUrl(imageUrl: string): string {
   if (!imageUrl) return PLACEHOLDER_IMAGE
@@ -227,6 +262,151 @@ export async function fetchGrades(): Promise<Grade[]> {
   return response.data
 }
 
+// Coupon APIs
+// Update the coupon validation function
+export async function validateCoupon(
+  couponCode: string,
+  orderAmount: number,
+  cartItems: CartItem[] = [],
+): Promise<CouponValidationResult> {
+  try {
+    console.log("Validating coupon:", { couponCode, orderAmount, cartItemsCount: cartItems.length })
+
+    // Fetch all available coupons
+    const response = await apiRequest<{
+      success: boolean
+      data: {
+        success: boolean
+        data: Coupon[]
+      }
+    }>("/coupon/coupon-list/")
+
+    if (!response.success || !response.data.success) {
+      return {
+        isValid: false,
+        message: "Unable to validate coupon at this time. Please try again.",
+      }
+    }
+
+    const coupons = response.data.data
+    console.log("Available coupons:", coupons)
+
+    // Find the coupon with matching code (case-insensitive)
+    const coupon = coupons.find((c) => c.code.toLowerCase() === couponCode.toLowerCase())
+
+    if (!coupon) {
+      return {
+        isValid: false,
+        message: "Invalid coupon code. Please check and try again.",
+      }
+    }
+
+    // Check if coupon is active
+    if (!coupon.isActive) {
+      return {
+        isValid: false,
+        message: "This coupon is no longer active.",
+      }
+    }
+
+    // Check validity dates
+    const now = new Date()
+    const validFrom = new Date(coupon.validFrom)
+    const validUntil = new Date(coupon.validUntil)
+
+    if (now < validFrom) {
+      return {
+        isValid: false,
+        message: `This coupon is not yet valid. Valid from ${validFrom.toLocaleDateString()}.`,
+      }
+    }
+
+    if (now > validUntil) {
+      return {
+        isValid: false,
+        message: `This coupon has expired on ${validUntil.toLocaleDateString()}.`,
+      }
+    }
+
+    // Check minimum order amount
+    if (orderAmount < coupon.minimumOrderAmount) {
+      return {
+        isValid: false,
+        message: `Minimum order amount of ₹${coupon.minimumOrderAmount} required for this coupon.`,
+      }
+    }
+
+    // Check product applicability for product-specific coupons
+    if (coupon.type === "product" && coupon.products && cartItems.length > 0) {
+      const applicableProductIds = coupon.products.map((p) => p._id)
+      const hasApplicableProducts = cartItems.some((item) => applicableProductIds.includes(item.product._id))
+
+      if (!hasApplicableProducts) {
+        return {
+          isValid: false,
+          message: "This coupon is not applicable to the products in your cart.",
+        }
+      }
+
+      // Calculate discount only for applicable products
+      const applicableAmount = cartItems
+        .filter((item) => applicableProductIds.includes(item.product._id))
+        .reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+
+      const discountAmount = Math.round((applicableAmount * coupon.offerPercentage) / 100)
+
+      return {
+        isValid: true,
+        coupon,
+        message: `Coupon applied! You saved ₹${discountAmount} (${coupon.offerPercentage}% off applicable products).`,
+        discountAmount,
+      }
+    }
+
+    // For normal coupons, apply to entire order
+    const discountAmount = Math.round((orderAmount * coupon.offerPercentage) / 100)
+
+    return {
+      isValid: true,
+      coupon,
+      message: `Coupon applied! You saved ₹${discountAmount} (${coupon.offerPercentage}% off).`,
+      discountAmount,
+    }
+  } catch (error) {
+    console.error("Error validating coupon:", error)
+    return {
+      isValid: false,
+      message: "Unable to validate coupon. Please try again later.",
+    }
+  }
+}
+
+// Add function to fetch all coupons (for admin or display purposes)
+export async function fetchAllCoupons(): Promise<Coupon[]> {
+  try {
+    const response = await apiRequest<{
+      success: boolean
+      data: {
+        success: boolean
+        data: Coupon[]
+      }
+    }>("/coupon/coupon-list/")
+
+    if (response.success && response.data.success) {
+      return response.data.data
+    }
+
+    return []
+  } catch (error) {
+    console.error("Error fetching coupons:", error)
+    return []
+  }
+}
+
+export async function applyCoupon(couponCode: string, orderAmount: number): Promise<CouponValidationResponse> {
+  return validateCoupon(couponCode, orderAmount)
+}
+
 // Address APIs
 export async function fetchUserAddresses(userId: string): Promise<Address[]> {
   try {
@@ -337,9 +517,11 @@ export async function fetchOrderDetails(orderId: string): Promise<Order> {
 
 export async function createOrder(orderData: {
   userId: string
-  productId: string
-  quantity: number
+  productId?: string
+  quantity?: number
   addressId: string
+  couponId?: string
+  shippingCost?: number
 }): Promise<Order> {
   const data = await apiRequest<{ success: boolean; data: { order: Order } }>("/users/order/place-order", {
     method: "POST",
@@ -630,3 +812,5 @@ export async function updateUserPassword(userId: string, oldPassword: string, ne
     throw error
   }
 }
+
+// Add these exports at the end of the file
