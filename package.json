@@ -2,16 +2,12 @@
   "name": "teal-parrot-ecommerce",
   "version": "0.1.0",
   "private": true,
-  "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
-  },
   "scripts": {
-    "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "dev": "next dev",
+    "postinstall": "node ./scripts/check-env.js",
     "lint": "next lint",
-    "postinstall": "node ./scripts/check-env.js"
+    "start": "next start"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
@@ -43,6 +39,7 @@
     "next-themes": "latest",
     "path": "latest",
     "react": "^18",
+    "react-day-picker": "latest",
     "react-dom": "^18",
     "react-hook-form": "latest",
     "react-intersection-observer": "latest",
@@ -63,5 +60,9 @@
     "postcss": "^8.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
   }
 }

@@ -20,10 +20,15 @@ import {
   ChevronRight,
   Loader2,
   AlertCircle,
+  Calendar,
+  CreditCard,
+  Eye,
 } from "lucide-react"
 import type { Address, CartItem, WishlistItem, Order } from "@/lib/types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAccountNavigation } from "@/lib/account-navigation-context"
+import { formatPrice } from "@/lib/utils"
+import { OrderDetailsModal } from "@/components/account/order-details-modal"
 
 export default function AccountPage() {
   const [addresses, setAddresses] = useState<Address[]>([])
@@ -32,6 +37,8 @@ export default function AccountPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false)
   const { user } = useAuthStore()
   const { navigateTo } = useAccountNavigation()
 
@@ -92,7 +99,13 @@ export default function AccountPage() {
 
       try {
         const ordersData = await fetchUserOrders(user._id)
-        setOrders(ordersData)
+        // Sort orders by placedAt date (newest first)
+        const sortedOrders = ordersData.sort((a, b) => {
+          const dateA = new Date(a.placedAt).getTime()
+          const dateB = new Date(b.placedAt).getTime()
+          return dateB - dateA
+        })
+        setOrders(sortedOrders)
       } catch (err) {
         console.error("Error fetching orders:", err)
       }
@@ -120,6 +133,49 @@ export default function AccountPage() {
       return "N/A"
     }
   }
+
+  const formatDateTime = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    } catch (e) {
+      return "N/A"
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "delivered":
+        return "bg-green-100 text-green-800"
+      case "shipped":
+        return "bg-blue-100 text-blue-800"
+      case "processing":
+      case "pending":
+        return "bg-yellow-100 text-yellow-800"
+      case "cancelled":
+        return "bg-red-100 text-red-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
+  const handleViewOrderDetails = (order: Order) => {
+    setSelectedOrder(order)
+    setIsOrderModalOpen(true)
+  }
+
+  const handleCloseOrderModal = () => {
+    setIsOrderModalOpen(false)
+    setSelectedOrder(null)
+  }
+
+  // Get the most recent order for detailed display
+  const mostRecentOrder = orders.length > 0 ? orders[0] : null
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -242,13 +298,13 @@ export default function AccountPage() {
           </CardContent>
         </AnimatedCard>
 
-        {/* Recent Orders Card */}
-        <AnimatedCard delay={0.3}>
+        {/* Most Recent Order Card - Enhanced */}
+        <AnimatedCard delay={0.3} className="md:col-span-2 lg:col-span-1">
           <CardHeader className="pb-3">
             <div className="flex justify-between items-center">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Package className="h-5 w-5 text-teal-500" />
-                Recent Orders
+                Most Recent Order
               </CardTitle>
               <Button
                 variant="ghost"
@@ -261,45 +317,128 @@ export default function AccountPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {orders.length > 0 ? (
-              <div className="space-y-3">
-                {orders.slice(0, 3).map((order, idx) => (
-                  <div
-                    key={order.orderId || idx}
-                    className="flex items-center gap-3 border-b pb-2 last:border-0 last:pb-0"
-                  >
-                    <div className="w-12 h-12 bg-gray-100 rounded-md overflow-hidden flex-shrink-0 flex items-center justify-center">
-                      <Package className="h-6 w-6 text-gray-400" />
-                    </div>
-                    <div className="flex-grow">
-                      <p className="font-medium text-sm truncate">
-                        Order #{order.orderId?.substring(0, 8) || "Unknown"}
-                      </p>
-                      <div className="flex justify-between items-center">
-                        <p className="text-xs text-gray-500">{order.placedAt ? formatDate(order.placedAt) : "N/A"}</p>
-                        <Badge
-                          className={
-                            order.status === "delivered"
-                              ? "bg-green-100 text-green-800"
-                              : order.status === "shipped"
-                                ? "bg-blue-100 text-blue-800"
-                                : order.status === "processing" || order.status === "pending"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : order.status === "cancelled"
-                                    ? "bg-red-100 text-red-800"
-                                    : "bg-gray-100 text-gray-800"
-                          }
-                        >
-                          {order.status || "Pending"}
-                        </Badge>
+            {mostRecentOrder ? (
+              <div className="space-y-4">
+                {/* Order Header */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-sm">
+                      Order #
+                      {mostRecentOrder.orderId?.substring(0, 8) || mostRecentOrder._id?.substring(0, 8) || "Unknown"}
+                    </p>
+                    <p className="text-xs text-gray-500 flex items-center gap-1">
+                      <Calendar className="h-3 w-3" />
+                      {mostRecentOrder.placedAt ? formatDateTime(mostRecentOrder.placedAt) : "N/A"}
+                    </p>
+                  </div>
+                  <Badge className={getStatusColor(mostRecentOrder.status || "pending")}>
+                    {mostRecentOrder.status || "Pending"}
+                  </Badge>
+                </div>
+
+                {/* Order Details */}
+                <div className="bg-gray-50 p-3 rounded-md space-y-3">
+                  {/* Items Preview */}
+                  <div>
+                    <p className="text-xs font-medium text-gray-700 mb-2">
+                      Items ({mostRecentOrder.items?.length || 0})
+                    </p>
+                    {mostRecentOrder.items && mostRecentOrder.items.length > 0 ? (
+                      <div className="space-y-2">
+                        {mostRecentOrder.items.slice(0, 2).map((item, idx) => (
+                          <div key={idx} className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-gray-200 rounded overflow-hidden flex-shrink-0">
+                              {item.product?.image ? (
+                                <Image
+                                  src={item.product.image || "/placeholder.svg"}
+                                  alt={item.product.name || "Product"}
+                                  width={32}
+                                  height={32}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Package className="h-3 w-3 text-gray-500" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-medium truncate">
+                                {item.product?.name || `Product ${idx + 1}`}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Qty: {item.quantity} • {formatPrice(item.product?.price || 0)}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                        {mostRecentOrder.items.length > 2 && (
+                          <p className="text-xs text-gray-500 text-center">
+                            +{mostRecentOrder.items.length - 2} more item(s)
+                          </p>
+                        )}
                       </div>
+                    ) : (
+                      <p className="text-xs text-gray-500">No items found</p>
+                    )}
+                  </div>
+
+                  {/* Order Summary */}
+                  <div className="border-t pt-2 space-y-1">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-600 flex items-center gap-1">
+                        <CreditCard className="h-3 w-3" />
+                        Total Amount
+                      </span>
+                      <span className="text-sm font-semibold text-teal-600">
+                        {formatPrice(mostRecentOrder.totalPrice || 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-600">Payment Status</span>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${
+                          mostRecentOrder.paymentStatus === "paid"
+                            ? "border-green-200 text-green-700"
+                            : "border-yellow-200 text-yellow-700"
+                        }`}
+                      >
+                        {mostRecentOrder.paymentStatus || "Pending"}
+                      </Badge>
                     </div>
                   </div>
-                ))}
+
+                  {/* Shipping Address */}
+                  {mostRecentOrder.shippingAddress && (
+                    <div className="border-t pt-2">
+                      <p className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        Shipping Address
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        {mostRecentOrder.shippingAddress.address}, {mostRecentOrder.shippingAddress.city},{" "}
+                        {mostRecentOrder.shippingAddress.state} - {mostRecentOrder.shippingAddress.pincode}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleViewOrderDetails(mostRecentOrder)}
+                  className="w-full text-teal-600 border-teal-200 hover:bg-teal-50 flex items-center gap-2"
+                >
+                  <Eye className="h-4 w-4" />
+                  View Full Details
+                </Button>
               </div>
             ) : (
               <div className="text-center py-4 text-gray-500">
-                <p>No orders found</p>
+                <Package className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm">No orders found</p>
                 <Button
                   variant="link"
                   className="text-teal-500 p-0 h-auto mt-1"
@@ -348,7 +487,7 @@ export default function AccountPage() {
                       <p className="font-medium text-sm truncate">{item.product?.name || "Product"}</p>
                       <div className="flex justify-between">
                         <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                        <p className="text-sm font-medium">₹{item.product?.price || 0}</p>
+                        <p className="text-sm font-medium">{formatPrice(item.product?.price || 0)}</p>
                       </div>
                     </div>
                   </div>
@@ -357,10 +496,9 @@ export default function AccountPage() {
                 <div className="pt-2 flex justify-between border-t">
                   <p className="font-medium">Total:</p>
                   <p className="font-bold">
-                    ₹
-                    {cartItems
-                      .reduce((total, item) => total + (item.product?.price || 0) * item.quantity, 0)
-                      .toFixed(2)}
+                    {formatPrice(
+                      cartItems.reduce((total, item) => total + (item.product?.price || 0) * item.quantity, 0),
+                    )}
                   </p>
                 </div>
               </div>
@@ -414,7 +552,7 @@ export default function AccountPage() {
                     <div className="flex-grow">
                       <p className="font-medium text-sm truncate">{item.product?.name || "Product"}</p>
                       <div className="flex justify-between">
-                        <p className="text-sm font-medium">₹{item.product?.price || 0}</p>
+                        <p className="text-sm font-medium">{formatPrice(item.product?.price || 0)}</p>
                       </div>
                     </div>
                   </div>
@@ -480,6 +618,11 @@ export default function AccountPage() {
           </CardContent>
         </AnimatedCard>
       </motion.div>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <OrderDetailsModal order={selectedOrder} isOpen={isOrderModalOpen} onClose={handleCloseOrderModal} />
+      )}
     </AnimatedContainer>
   )
 }

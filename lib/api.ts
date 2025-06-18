@@ -638,7 +638,7 @@ export async function fetchCartItems(userId: string): Promise<CartItem[]> {
   }
 }
 
-// Update the cart functions to match the API documentation
+// Update the cart functions to use the new specific APIs
 export async function addToCart(userId: string, productId: string, quantity: number): Promise<void> {
   console.log("Adding to cart with data:", { userId, productId, quantity })
 
@@ -661,6 +661,32 @@ export async function removeFromCart(userId: string, productId: string): Promise
   dispatchCartUpdateEvent()
 }
 
+// New specific quantity management functions
+export async function increaseCartQuantity(userId: string, productId: string): Promise<void> {
+  console.log("Increasing cart quantity:", { userId, productId })
+
+  await apiRequest("/users/cart/increase-quantity", {
+    method: "POST",
+    body: JSON.stringify({ userId, productId }),
+  })
+
+  // Dispatch cart update event after successful increase
+  dispatchCartUpdateEvent()
+}
+
+export async function decreaseCartQuantity(userId: string, productId: string): Promise<void> {
+  console.log("Decreasing cart quantity:", { userId, productId })
+
+  await apiRequest("/users/cart/decrease-quantity", {
+    method: "POST",
+    body: JSON.stringify({ userId, productId }),
+  })
+
+  // Dispatch cart update event after successful decrease
+  dispatchCartUpdateEvent()
+}
+
+// Keep the old updateCartItem function for backward compatibility
 export async function updateCartItem(userId: string, productId: string, quantity: number): Promise<void> {
   await apiRequest("/users/cart/update", {
     method: "PUT",

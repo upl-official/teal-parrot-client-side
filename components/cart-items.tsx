@@ -5,7 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Trash2, Plus, Minus, ShoppingBag, Ruler } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { fetchCartItems, removeFromCart, updateCartItem } from "@/lib/api"
+import { fetchCartItems, removeFromCart, increaseCartQuantity, decreaseCartQuantity } from "@/lib/api"
 import type { CartItem as CartItemType } from "@/lib/types"
 import { useToast } from "@/hooks/use-toast"
 import { useAuthStore } from "@/lib/auth"
@@ -24,6 +24,11 @@ export function CartItems() {
   const { user } = useAuthStore()
   const userId = user?._id || ""
 
+  // Calculate total price from current items state
+  const calculateTotalPrice = (cartItems: CartItemType[]) => {
+    return cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
+  }
+
   const fetchCart = async () => {
     if (!userId) {
       setLoading(false)
@@ -34,10 +39,7 @@ export function CartItems() {
       setLoading(true)
       const cartItems = await fetchCartItems(userId)
       setItems(cartItems)
-
-      // Calculate total price
-      const total = cartItems.reduce((sum, item) => sum + item.product.price * item.quantity, 0)
-      setTotalPrice(total)
+      setTotalPrice(calculateTotalPrice(cartItems))
     } catch (error) {
       console.error("Error fetching cart:", error)
       toast({
@@ -59,14 +61,22 @@ export function CartItems() {
 
     try {
       setActionLoading((prev) => ({ ...prev, [productId]: true }))
+
+      // Optimistically update UI
+      const updatedItems = items.filter((item) => item.product._id !== productId)
+      setItems(updatedItems)
+      setTotalPrice(calculateTotalPrice(updatedItems))
+
       await removeFromCart(userId, productId)
+
       toast({
         title: "Item removed",
         description: "The item has been removed from your cart.",
       })
-      fetchCart()
     } catch (error) {
       console.error("Error removing item:", error)
+      // Revert optimistic update on error
+      fetchCart()
       toast({
         title: "Error",
         description: "Failed to remove item. Please try again.",
@@ -77,15 +87,62 @@ export function CartItems() {
     }
   }
 
-  const handleUpdateQuantity = async (productId: string, quantity: number) => {
-    if (quantity < 1 || !userId) return
+  const handleIncreaseQuantity = async (productId: string) => {
+    if (!userId) return
 
     try {
       setActionLoading((prev) => ({ ...prev, [productId]: true }))
-      await updateCartItem(userId, productId, quantity)
-      fetchCart()
+
+      // Optimistically update UI
+      const updatedItems = items.map((item) =>
+        item.product._id === productId ? { ...item, quantity: item.quantity + 1 } : item,
+      )
+      setItems(updatedItems)
+      setTotalPrice(calculateTotalPrice(updatedItems))
+
+      await increaseCartQuantity(userId, productId)
+
+      toast({
+        title: "Quantity updated",
+        description: "Item quantity has been increased.",
+      })
     } catch (error) {
-      console.error("Error updating quantity:", error)
+      console.error("Error increasing quantity:", error)
+      // Revert optimistic update on error
+      fetchCart()
+      toast({
+        title: "Error",
+        description: "Failed to update quantity. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setActionLoading((prev) => ({ ...prev, [productId]: false }))
+    }
+  }
+
+  const handleDecreaseQuantity = async (productId: string, currentQuantity: number) => {
+    if (!userId || currentQuantity <= 1) return
+
+    try {
+      setActionLoading((prev) => ({ ...prev, [productId]: true }))
+
+      // Optimistically update UI
+      const updatedItems = items.map((item) =>
+        item.product._id === productId ? { ...item, quantity: item.quantity - 1 } : item,
+      )
+      setItems(updatedItems)
+      setTotalPrice(calculateTotalPrice(updatedItems))
+
+      await decreaseCartQuantity(userId, productId)
+
+      toast({
+        title: "Quantity updated",
+        description: "Item quantity has been decreased.",
+      })
+    } catch (error) {
+      console.error("Error decreasing quantity:", error)
+      // Revert optimistic update on error
+      fetchCart()
       toast({
         title: "Error",
         description: "Failed to update quantity. Please try again.",
@@ -148,7 +205,7 @@ export function CartItems() {
           {items.map((item) => (
             <div
               key={item.product._id}
-              className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border rounded-lg bg-white shadow-sm"
+              className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 border rounded-lg bg-white shadow-sm transition-all duration-200"
             >
               <div className="relative w-full sm:w-24 h-24 overflow-hidden rounded-md">
                 <Image
@@ -181,32 +238,44 @@ export function CartItems() {
                 <div className="mt-2 flex flex-wrap items-center gap-4">
                   <div className="flex items-center border border-gray-300 rounded-md">
                     <button
-                      onClick={() => handleUpdateQuantity(item.product._id, item.quantity - 1)}
-                      className="px-2 py-1 border-r border-gray-300 hover:bg-gray-100"
+                      onClick={() => handleDecreaseQuantity(item.product._id, item.quantity)}
+                      className="px-2 py-1 border-r border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                       disabled={actionLoading[item.product._id] || item.quantity <= 1}
                     >
-                      <Minus className="h-3 w-3" />
+                      {actionLoading[item.product._id] ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-t border-gray-400"></div>
+                      ) : (
+                        <Minus className="h-3 w-3" />
+                      )}
                     </button>
-                    <span className="px-3 py-1 font-medium">{item.quantity}</span>
+                    <span className="px-3 py-1 font-medium min-w-[2rem] text-center">{item.quantity}</span>
                     <button
-                      onClick={() => handleUpdateQuantity(item.product._id, item.quantity + 1)}
-                      className="px-2 py-1 border-l border-gray-300 hover:bg-gray-100"
+                      onClick={() => handleIncreaseQuantity(item.product._id)}
+                      className="px-2 py-1 border-l border-gray-300 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                       disabled={actionLoading[item.product._id]}
                     >
-                      <Plus className="h-3 w-3" />
+                      {actionLoading[item.product._id] ? (
+                        <div className="animate-spin rounded-full h-3 w-3 border-t border-gray-400"></div>
+                      ) : (
+                        <Plus className="h-3 w-3" />
+                      )}
                     </button>
                   </div>
                   <button
                     onClick={() => handleRemoveItem(item.product._id)}
-                    className="text-red-500 hover:text-red-700 flex items-center"
+                    className="text-red-500 hover:text-red-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"
                     disabled={actionLoading[item.product._id]}
                   >
-                    <Trash2 className="h-4 w-4 mr-1" />
+                    {actionLoading[item.product._id] ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-t border-red-400 mr-1"></div>
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-1" />
+                    )}
                     <span>Remove</span>
                   </button>
                 </div>
               </div>
-              <div className="font-bold text-lg sm:text-right w-full sm:w-auto">
+              <div className="font-bold text-lg sm:text-right w-full sm:w-auto transition-all duration-200">
                 {formatPrice(item.product.price * item.quantity)}
               </div>
             </div>
@@ -218,7 +287,7 @@ export function CartItems() {
           <div className="space-y-2 mb-4">
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span>{formatPrice(totalPrice)}</span>
+              <span className="transition-all duration-200">{formatPrice(totalPrice)}</span>
             </div>
             <div className="flex justify-between">
               <span>Shipping</span>
@@ -227,7 +296,7 @@ export function CartItems() {
             <div className="border-t pt-2 mt-2">
               <div className="flex justify-between font-bold">
                 <span>Total</span>
-                <span>{formatPrice(totalPrice)}</span>
+                <span className="transition-all duration-200">{formatPrice(totalPrice)}</span>
               </div>
             </div>
           </div>

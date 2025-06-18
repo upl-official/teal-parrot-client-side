@@ -30,7 +30,7 @@ import { ShippingAddress } from "./shipping-address"
 import type { CartItem, Address, Product, Coupon, CouponValidationResult } from "@/lib/types"
 import { motion, AnimatePresence } from "framer-motion"
 import { useAuthStore } from "@/lib/auth"
-import { cn } from "@/lib/utils"
+import { cn, formatPrice } from "@/lib/utils"
 
 const steps = [
   { id: "review", title: "Order Review", icon: ShoppingBag },
@@ -414,7 +414,9 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
       }
 
       // Check if we're in development mode and redirect to test page
-      const isDevelopment = process.env.NODE_ENV === "development" || window.location.hostname === "localhost"
+      //const isDevelopment = process.env.NODE_ENV === "development" || window.location.hostname === "localhost" || window.location.hostname === "vusercontent.net"
+
+      const isDevelopment = true
 
       if (isDevelopment) {
         // Prepare comprehensive order data for test page
@@ -722,7 +724,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
                             />
                             <div className="flex-1">
                               <h3 className="font-medium">{directPurchase.product.name}</h3>
-                              <p className="text-sm font-medium">₹{directPurchase.product.price}</p>
+                              <p className="text-sm font-medium">{formatPrice(directPurchase.product.price)}</p>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Button
@@ -765,7 +767,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
                             />
                             <div className="flex-1">
                               <h3 className="font-medium">{item.product.name}</h3>
-                              <p className="text-sm font-medium">₹{item.product.price}</p>
+                              <p className="text-sm font-medium">{formatPrice(item.product.price)}</p>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Button
@@ -856,7 +858,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
                               </p>
                               {appliedCoupon.minimumOrderAmount > 0 && (
                                 <p className="text-xs text-green-600">
-                                  Min. order: ₹{appliedCoupon.minimumOrderAmount}
+                                  Min. order: {formatPrice(appliedCoupon.minimumOrderAmount)}
                                 </p>
                               )}
                             </div>
@@ -981,7 +983,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
                   </span>
                   <span className="font-medium">
                     {directPurchase.product
-                      ? `₹${directPurchase.product.price * directPurchase.quantity}`
+                      ? formatPrice(directPurchase.product.price * directPurchase.quantity)
                       : "Price calculated at checkout"}
                   </span>
                 </div>
@@ -998,7 +1000,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
                     <span className="text-gray-600">
                       {item.product.name} × {item.quantity}
                     </span>
-                    <span className="font-medium">₹{item.product.price * item.quantity}</span>
+                    <span className="font-medium">{formatPrice(item.product.price * item.quantity)}</span>
                   </motion.div>
                 ))
               )}
@@ -1007,23 +1009,23 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
             <div className="space-y-2 py-4 border-t border-b border-gray-200">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">₹{subtotal}</span>
+                <span className="font-medium">{formatPrice(subtotal)}</span>
               </div>
               {appliedCoupon && discount > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Discount ({appliedCoupon.code})</span>
-                  <span>-₹{discount}</span>
+                  <span>-{formatPrice(discount)}</span>
                 </div>
               )}
               <div className="flex justify-between">
                 <span className="text-gray-600">Shipping</span>
-                <span className="font-medium">₹{shippingCost}</span>
+                <span className="font-medium">{formatPrice(shippingCost)}</span>
               </div>
             </div>
 
             <div className="flex justify-between pt-4 text-lg font-semibold">
               <span>Total</span>
-              <span className="text-teal-600">₹{total}</span>
+              <span className="text-teal-600">{formatPrice(total)}</span>
             </div>
 
             {appliedCoupon && (
@@ -1031,7 +1033,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
                 <div className="flex items-center text-sm text-green-800">
                   <Tag className="h-4 w-4 mr-2" />
                   <span>
-                    You saved ₹{discount} with {appliedCoupon.code}!
+                    You saved {formatPrice(discount)} with {appliedCoupon.code}!
                   </span>
                 </div>
               </div>

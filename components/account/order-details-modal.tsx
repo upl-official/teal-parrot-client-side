@@ -123,192 +123,210 @@ export function OrderDetailsModal({ order, isOpen, onClose }: OrderDetailsProps)
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Order Status and Payment Info */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Truck className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">Order Status</span>
-                </div>
-                <Badge className={getStatusColor(order.status)}>
-                  {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                </Badge>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <CreditCard className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">Payment Status</span>
-                </div>
-                <Badge className={getPaymentStatusColor(order.paymentStatus)}>
-                  {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
-                </Badge>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-700">Order Total</span>
-                </div>
-                <span className="text-lg font-semibold text-teal-600">{formatPrice(order.totalPrice)}</span>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Shipping Address */}
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <MapPin className="h-4 w-4 text-gray-500" />
-                <span className="font-medium text-gray-700">Shipping Address</span>
+        {/* Error Handling */}
+        {(!order || !order._id) && (
+          <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Error</DialogTitle>
+                <DialogDescription>Unable to load order details. Please try again.</DialogDescription>
+              </DialogHeader>
+              <div className="flex justify-end pt-4">
+                <Button onClick={onClose}>Close</Button>
               </div>
-              <p className="text-gray-600">
-                {order.shippingAddress.address}
-                <br />
-                {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}
-              </p>
-            </CardContent>
-          </Card>
+            </DialogContent>
+          </Dialog>
+        )}
 
-          <Separator />
+        {order && order._id && (
+          <div className="space-y-6">
+            {/* Order Status and Payment Info */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Truck className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Order Status</span>
+                  </div>
+                  <Badge className={getStatusColor(order.status)}>
+                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  </Badge>
+                </CardContent>
+              </Card>
 
-          {/* Order Items */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Package className="h-5 w-5 text-teal-500" />
-              Order Items ({order.items.length})
-            </h3>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CreditCard className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Payment Status</span>
+                  </div>
+                  <Badge className={getPaymentStatusColor(order.paymentStatus)}>
+                    {order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1)}
+                  </Badge>
+                </CardContent>
+              </Card>
 
-            <div className="space-y-4">
-              <AnimatePresence>
-                {order.items.map((item, index) => (
-                  <motion.div
-                    key={`${item.product._id}-${index}`}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: index * 0.1 }}
-                  >
-                    <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex gap-4">
-                          {/* Product Image */}
-                          <div className="relative flex-shrink-0">
-                            <motion.div
-                              className="relative w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden cursor-pointer group"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => handleProductClick(item.product._id)}
-                            >
-                              <ProductImage
-                                src={item.product.image}
-                                alt={item.product.name}
-                                className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                                onLoadStart={() => handleImageLoadStart(item.product._id)}
-                                onLoad={() => handleImageLoad(item.product._id)}
-                              />
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <span className="text-sm font-medium text-gray-700">Order Total</span>
+                  </div>
+                  <span className="text-lg font-semibold text-teal-600">{formatPrice(order.totalPrice)}</span>
+                </CardContent>
+              </Card>
+            </div>
 
-                              {/* Hover overlay */}
-                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
-                                <Eye className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                              </div>
+            {/* Shipping Address */}
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <MapPin className="h-4 w-4 text-gray-500" />
+                  <span className="font-medium text-gray-700">Shipping Address</span>
+                </div>
+                <p className="text-gray-600">
+                  {order.shippingAddress.address}
+                  <br />
+                  {order.shippingAddress.city}, {order.shippingAddress.state} - {order.shippingAddress.pincode}
+                </p>
+              </CardContent>
+            </Card>
 
-                              {/* Loading indicator */}
-                              {imageLoadingStates[item.product._id] && (
-                                <div className="absolute inset-0 bg-gray-100 animate-pulse" />
-                              )}
-                            </motion.div>
-                          </div>
+            <Separator />
 
-                          {/* Product Details */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
-                              <div className="flex-1">
-                                <h4
-                                  className="font-semibold text-gray-900 cursor-pointer hover:text-teal-600 transition-colors line-clamp-2"
-                                  onClick={() => handleProductClick(item.product._id)}
-                                >
-                                  {item.product.name}
-                                </h4>
+            {/* Order Items */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Package className="h-5 w-5 text-teal-500" />
+                Order Items ({order.items.length})
+              </h3>
 
-                                <div className="mt-2 space-y-1">
-                                  <div className="flex flex-wrap gap-2 text-sm text-gray-600">
-                                    <span className="bg-gray-100 px-2 py-1 rounded">{item.product.category}</span>
-                                    {item.product.material && (
-                                      <span className="bg-gray-100 px-2 py-1 rounded">{item.product.material}</span>
-                                    )}
-                                    {item.product.size && (
-                                      <span className="bg-gray-100 px-2 py-1 rounded">Size: {item.product.size}</span>
+              <div className="space-y-4">
+                <AnimatePresence>
+                  {order.items.map((item, index) => (
+                    <motion.div
+                      key={`${item.product._id}-${index}`}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ delay: index * 0.1 }}
+                    >
+                      <Card className="overflow-hidden hover:shadow-md transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex gap-4">
+                            {/* Product Image */}
+                            <div className="relative flex-shrink-0">
+                              <motion.div
+                                className="relative w-20 h-20 md:w-24 md:h-24 rounded-lg overflow-hidden cursor-pointer group bg-gray-100"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => handleProductClick(item.product._id)}
+                              >
+                                {item.product.image ? (
+                                  <ProductImage
+                                    src={item.product.image}
+                                    alt={item.product.name}
+                                    className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                    onLoadStart={() => handleImageLoadStart(item.product._id)}
+                                    onLoad={() => handleImageLoad(item.product._id)}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <Package className="h-8 w-8 text-gray-400" />
+                                  </div>
+                                )}
+
+                                {/* Hover overlay */}
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 flex items-center justify-center">
+                                  <Eye className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </div>
+                              </motion.div>
+                            </div>
+
+                            {/* Product Details */}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-2">
+                                <div className="flex-1">
+                                  <h4
+                                    className="font-semibold text-gray-900 cursor-pointer hover:text-teal-600 transition-colors line-clamp-2"
+                                    onClick={() => handleProductClick(item.product._id)}
+                                  >
+                                    {item.product.name}
+                                  </h4>
+
+                                  <div className="mt-2 space-y-1">
+                                    <div className="flex flex-wrap gap-2 text-sm text-gray-600">
+                                      <span className="bg-gray-100 px-2 py-1 rounded">{item.product.category}</span>
+                                      {item.product.material && (
+                                        <span className="bg-gray-100 px-2 py-1 rounded">{item.product.material}</span>
+                                      )}
+                                      {item.product.size && (
+                                        <span className="bg-gray-100 px-2 py-1 rounded">Size: {item.product.size}</span>
+                                      )}
+                                    </div>
+
+                                    {item.product.description && (
+                                      <p className="text-sm text-gray-500 line-clamp-2 mt-1">
+                                        {item.product.description}
+                                      </p>
                                     )}
                                   </div>
+                                </div>
 
-                                  {item.product.description && (
-                                    <p className="text-sm text-gray-500 line-clamp-2 mt-1">
-                                      {item.product.description}
+                                <div className="flex flex-col items-end gap-2">
+                                  <div className="text-right">
+                                    <p className="text-lg font-semibold text-gray-900">
+                                      {formatPrice(item.product.price)}
                                     </p>
-                                  )}
-                                </div>
-                              </div>
+                                    <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                                  </div>
 
-                              <div className="flex flex-col items-end gap-2">
-                                <div className="text-right">
-                                  <p className="text-lg font-semibold text-gray-900">
-                                    {formatPrice(item.product.price)}
-                                  </p>
-                                  <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleProductClick(item.product._id)}
+                                    className="text-teal-600 border-teal-200 hover:bg-teal-50"
+                                  >
+                                    View Product
+                                  </Button>
                                 </div>
-
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleProductClick(item.product._id)}
-                                  className="text-teal-600 border-teal-200 hover:bg-teal-50"
-                                >
-                                  View Product
-                                </Button>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
-          </div>
 
-          {/* Order Summary */}
-          {order.orderSummary && (
-            <>
-              <Separator />
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <h4 className="font-semibold mb-3">Order Summary</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Total Items:</span>
-                    <span>{order.orderSummary.totalItems}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Subtotal:</span>
-                    <span>{formatPrice(order.orderSummary.subtotal)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between font-semibold">
-                    <span>Total:</span>
-                    <span className="text-teal-600">{formatPrice(order.totalPrice)}</span>
+            {/* Order Summary */}
+            {order.orderSummary && (
+              <>
+                <Separator />
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="font-semibold mb-3">Order Summary</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Total Items:</span>
+                      <span>{order.orderSummary.totalItems}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Subtotal:</span>
+                      <span>{formatPrice(order.orderSummary.subtotal)}</span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between font-semibold">
+                      <span>Total:</span>
+                      <span className="text-teal-600">{formatPrice(order.totalPrice)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </>
-          )}
-        </div>
+              </>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )

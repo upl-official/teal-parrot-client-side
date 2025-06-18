@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
-import { User, ShoppingBag, MapPin, ClipboardList, Heart, LogOut, CreditCard, Bell, Shield } from "lucide-react"
+import { User, ShoppingBag, MapPin, ClipboardList, Heart, LogOut, Shield } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { useAuthStore } from "@/lib/auth"
 import { cn } from "@/lib/utils"
@@ -36,16 +36,6 @@ const sidebarItems = [
     name: "Wishlist",
     href: "/wishlist",
     icon: Heart,
-  },
-  {
-    name: "Payment Methods",
-    href: "/account/payment",
-    icon: CreditCard,
-  },
-  {
-    name: "Notifications",
-    href: "/account/notifications",
-    icon: Bell,
   },
   {
     name: "Security",

@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CheckCircle, XCircle, Package, CreditCard, MapPin, Tag, Calendar, User, Mail, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
+import { useAuthStore } from "@/lib/auth"
 
 interface OrderData {
   orderId: string
@@ -35,6 +36,7 @@ export default function PaymentTestPage() {
   const [actionType, setActionType] = useState<"success" | "failure" | null>(null)
   const router = useRouter()
   const { toast } = useToast()
+  const { token } = useAuthStore()
 
   useEffect(() => {
     // Get order data from sessionStorage
@@ -68,6 +70,12 @@ export default function PaymentTestPage() {
     setLoading(true)
     setActionType("success")
     try {
+      // Check if user is authenticated
+      if (!token) {
+        throw new Error("Authentication required. Please log in first.")
+      }
+
+      // Use the exact payload format specified
       const payloadData = {
         txnid: orderData?.orderDetails?.paymentDetails?.transactionId || "68513e15b25c02d075ca75b6",
         amount: orderData?.orderDetails?.totalPrice?.toString() || "1769.1",
@@ -78,26 +86,39 @@ export default function PaymentTestPage() {
         hash: "a5920c86d8328ed90affccb93b7bc52eeb3ef0a00d1b64e13ab5347ec3c7a6ce0fd3901753e2c79aa9533f824eee00e089614bace586e29dd8218b60b6fd3ef",
       }
 
-      console.log("Sending success payload:", payloadData)
+      console.log("Sending success payload to backend:", payloadData)
+      console.log("Using auth token:", token ? "present" : "missing")
 
-      const response = await fetch("/api/v1/users/payment/success", {
+      // Call the actual backend API with authorization header
+      const response = await fetch("https://backend-project-r734.onrender.com/api/v1/users/payment/success", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payloadData),
       })
 
-      const result = await response.json()
-      console.log("Success response:", result)
+      console.log("Response status:", response.status)
+      console.log("Response headers:", response.headers)
 
-      if (result.success) {
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Error response:", errorText)
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
+      }
+
+      const result = await response.json()
+      console.log("Success response from backend:", result)
+
+      // Check if the response indicates success
+      if (result.success && result.data?.success) {
         // Clear test data
         sessionStorage.removeItem("testOrderData")
 
         toast({
           title: "Payment Successful!",
-          description: "Your order has been confirmed and payment processed successfully.",
+          description: result.data.message || "Your order has been confirmed and payment processed successfully.",
         })
 
         // Show success feedback before redirect
@@ -105,13 +126,13 @@ export default function PaymentTestPage() {
           router.push("/payment/success")
         }, 2000)
       } else {
-        throw new Error(result.message || "Payment processing failed")
+        throw new Error(result.data?.message || result.message || "Payment processing failed")
       }
     } catch (error) {
       console.error("Error processing success:", error)
       toast({
-        title: "Error",
-        description: "Failed to process payment success. Please try again.",
+        title: "Payment Success Error",
+        description: error instanceof Error ? error.message : "Failed to process payment success. Please try again.",
         variant: "destructive",
       })
       setActionType(null)
@@ -124,30 +145,48 @@ export default function PaymentTestPage() {
     setLoading(true)
     setActionType("failure")
     try {
-      const payloadData = {
-        txnid: orderData?.orderDetails?.paymentDetails?.transactionId || "68513e15b25c02d075ca75b6",
+      // Check if user is authenticated
+      if (!token) {
+        throw new Error("Authentication required. Please log in first.")
       }
 
-      console.log("Sending failure payload:", payloadData)
+      // Use the exact payload format specified for failure
+      const payloadData = {
+        txnid: orderData?.orderDetails?.paymentDetails?.transactionId || "68514f97b25c02d075ca9393",
+      }
 
-      const response = await fetch("/api/v1/users/payment/failure", {
+      console.log("Sending failure payload to backend:", payloadData)
+      console.log("Using auth token:", token ? "present" : "missing")
+
+      // Call the actual backend API with authorization header
+      const response = await fetch("https://backend-project-r734.onrender.com/api/v1/users/payment/failure", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(payloadData),
       })
 
-      const result = await response.json()
-      console.log("Failure response:", result)
+      console.log("Response status:", response.status)
 
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("Error response:", errorText)
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
+      }
+
+      const result = await response.json()
+      console.log("Failure response from backend:", result)
+
+      // Check if the response indicates the failure was processed successfully
       if (result.success) {
         // Clear test data
         sessionStorage.removeItem("testOrderData")
 
         toast({
           title: "Payment Failed",
-          description: "Your payment could not be processed. Order has been cancelled.",
+          description: result.data?.message || "Your payment could not be processed. Order has been cancelled.",
           variant: "destructive",
         })
 
@@ -161,8 +200,8 @@ export default function PaymentTestPage() {
     } catch (error) {
       console.error("Error processing failure:", error)
       toast({
-        title: "Error",
-        description: "Failed to process payment failure. Please try again.",
+        title: "Payment Failure Error",
+        description: error instanceof Error ? error.message : "Failed to process payment failure. Please try again.",
         variant: "destructive",
       })
       setActionType(null)
@@ -212,7 +251,7 @@ export default function PaymentTestPage() {
             )}
             <AlertDescription className={actionType === "success" ? "text-green-800" : "text-red-800"}>
               {loading
-                ? `Processing ${actionType} payment...`
+                ? `Processing ${actionType} payment with backend API...`
                 : `Payment ${actionType} processed successfully! Redirecting...`}
             </AlertDescription>
           </div>
@@ -339,6 +378,43 @@ export default function PaymentTestPage() {
                 </p>
               </div>
             </div>
+
+            {/* API Payload Preview */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm font-medium text-blue-800 mb-2">API Payload Preview</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div>
+                  <p className="font-medium text-blue-700">Success Payload:</p>
+                  <pre className="bg-white p-2 rounded mt-1 text-xs overflow-x-auto">
+                    {JSON.stringify(
+                      {
+                        txnid: order.paymentDetails?.transactionId || "68513e15b25c02d075ca75b6",
+                        amount: order.totalPrice?.toString() || "1769.1",
+                        productinfo: order.items?.[0]?.product?.name || "MIRA",
+                        firstname: "Sandeep",
+                        email: "sandeep@gmail.com",
+                        status: "pending",
+                        hash: "a5920c86d8328ed90affccb93b7bc52eeb3ef0a00d1b64e13ab5347ec3c7a6ce0fd3901753e2c79aa9533f824eee00e089614bace586e29dd8218b60b6fd3ef",
+                      },
+                      null,
+                      2,
+                    )}
+                  </pre>
+                </div>
+                <div>
+                  <p className="font-medium text-blue-700">Failure Payload:</p>
+                  <pre className="bg-white p-2 rounded mt-1 text-xs overflow-x-auto">
+                    {JSON.stringify(
+                      {
+                        txnid: order.paymentDetails?.transactionId || "68514f97b25c02d075ca9393",
+                      },
+                      null,
+                      2,
+                    )}
+                  </pre>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -425,21 +501,30 @@ export default function PaymentTestPage() {
         </div>
       </div>
 
+      {/* Authentication Status */}
+      {!token && (
+        <Alert className="mb-6 border-yellow-200 bg-yellow-50">
+          <AlertDescription className="text-yellow-800">
+            ⚠️ Authentication required: Please log in to test payment functionality.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Payment Action Buttons */}
       <Card className="mt-8">
         <CardHeader>
           <CardTitle>Simulate Payment Outcome</CardTitle>
           <p className="text-sm text-gray-600">
-            Choose the payment outcome to test different scenarios. This will send the appropriate API requests and
-            redirect you to the corresponding result page.
+            Choose the payment outcome to test different scenarios. This will send the appropriate API requests to the
+            backend and redirect you to the corresponding result page.
           </p>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 justify-center">
             <Button
               onClick={handleSuccess}
-              disabled={loading}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 min-w-[120px]"
+              disabled={loading || !token}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 min-w-[120px] disabled:opacity-50"
               size="lg"
             >
               {loading && actionType === "success" ? (
@@ -452,9 +537,9 @@ export default function PaymentTestPage() {
 
             <Button
               onClick={handleFailure}
-              disabled={loading}
+              disabled={loading || !token}
               variant="destructive"
-              className="px-8 py-3 min-w-[120px]"
+              className="px-8 py-3 min-w-[120px] disabled:opacity-50"
               size="lg"
             >
               {loading && actionType === "failure" ? (
@@ -469,9 +554,10 @@ export default function PaymentTestPage() {
           <div className="mt-6 text-center space-y-2">
             <p className="text-xs text-gray-500">This page is only available in development mode</p>
             <div className="flex justify-center gap-4 text-xs text-gray-400">
-              <span>Success → /payment/success</span>
-              <span>•</span>
-              <span>Failure → /payment/failure</span>
+              <span>Success → backend-project-r734.onrender.com/api/v1/users/payment/success</span>
+            </div>
+            <div className="flex justify-center gap-4 text-xs text-gray-400">
+              <span>Failure → backend-project-r734.onrender.com/api/v1/users/payment/failure</span>
             </div>
           </div>
         </CardContent>
