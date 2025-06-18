@@ -123,7 +123,12 @@ export default function PaymentTestPage() {
 
         // Show success feedback before redirect
         setTimeout(() => {
-          router.push("/payment/success")
+          // Replace this line:
+          // router.push("/payment/success")
+
+          // With this corrected redirect that includes required query parameters:
+          const successUrl = `/payment/success?txnid=${payloadData.txnid}&status=success&amount=${payloadData.amount}`
+          router.push(successUrl)
         }, 2000)
       } else {
         throw new Error(result.data?.message || result.message || "Payment processing failed")
@@ -192,7 +197,12 @@ export default function PaymentTestPage() {
 
         // Show failure feedback before redirect
         setTimeout(() => {
-          router.push("/payment/failure")
+          // Replace this line:
+          // router.push("/payment/failure")
+
+          // With this corrected redirect that includes required query parameters:
+          const failureUrl = `/payment/failure?txnid=${payloadData.txnid}&status=failure&error=Payment processing failed`
+          router.push(failureUrl)
         }, 2000)
       } else {
         throw new Error(result.message || "Payment failure processing failed")

@@ -21,10 +21,16 @@ export default function PaymentFailurePage() {
     // Show failure toast
     toast({
       title: "Payment Failed",
-      description: "Your payment could not be processed. Please try again.",
+      description: error || "Your payment could not be processed. Please try again.",
       variant: "destructive",
     })
-  }, [toast])
+
+    // Clear test data if it exists
+    const isFromTestPage = sessionStorage.getItem("testOrderData")
+    if (isFromTestPage) {
+      sessionStorage.removeItem("testOrderData")
+    }
+  }, [toast, error])
 
   const handleRetryPayment = () => {
     // Redirect back to checkout or cart

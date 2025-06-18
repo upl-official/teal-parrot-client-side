@@ -1,8 +1,8 @@
 import type { Product, CartItem, WishlistItem, Category, Material, Grade, Address, Order, User } from "./types"
-import { getAuthToken, useAuthStore } from "@/lib/auth"
 import { dispatchCartUpdateEvent } from "./cart-events"
 import { DEV_MODE, getFallbackWishlistItems } from "./dev-fallbacks"
 import { handleApiError } from "./api-error-handler"
+import { useAuthStore } from "./auth"
 
 // Base URL for API
 const API_BASE_URL = "https://backend-project-r734.onrender.com/api/v1"
@@ -62,23 +62,25 @@ function ensureFullImageUrl(imageUrl: string): string {
   return `${baseUrl}/${imageUrl}`
 }
 
+// Get auth token from store
+const getAuthToken = () => {
+  return useAuthStore.getState().token
+}
+
 // Helper function for API requests with error handling
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  try {
-    // Get the authentication token
-    const token = getAuthToken()
+  const token = getAuthToken()
 
-    // Prepare headers with authentication if token exists
-    const headers: HeadersInit = {
+  const config: RequestInit = {
+    ...options,
+    headers: {
       "Content-Type": "application/json",
-      ...(options.headers || {}),
-    }
+      ...(token && { Authorization: `Bearer ${token}` }),
+      ...options.headers,
+    },
+  }
 
-    // Only add Authorization header if token exists
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
-    }
-
+  try {
     // Log the request for debugging
     console.log(`Making API request to: ${API_BASE_URL}${endpoint}`, {
       method: options.method || "GET",
@@ -86,26 +88,25 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
       body: options.body ? JSON.parse(options.body as string) : undefined,
     })
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-    })
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, config)
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
+      const errorText = await response.text()
+      let errorMessage = `HTTP error! status: ${response.status}`
 
-      // Handle authentication errors specifically
-      if (response.status === 401) {
-        console.error("Authentication failed - clearing auth state")
-        // Clear the auth state if we get a 401
-        useAuthStore.getState().logout()
-        throw new Error("Authentication failed. Please log in again.")
+      try {
+        const errorData = JSON.parse(errorText)
+        if (errorData.message) {
+          errorMessage = errorData.message
+        } else if (errorData.errors && Array.isArray(errorData.errors)) {
+          errorMessage = errorData.errors.map((err: any) => err.message).join(", ")
+        }
+      } catch (e) {
+        // If parsing fails, use the raw error text or default message
+        errorMessage = errorText || errorMessage
       }
 
-      const error = new Error(errorData.message || `API request failed: ${response.statusText}`)
-      // @ts-ignore - Add status code to error object
-      error.statusCode = response.status
-      throw error
+      throw new Error(errorMessage)
     }
 
     const responseData = await response.json()
@@ -432,18 +433,29 @@ export async function fetchUserAddresses(userId: string): Promise<Address[]> {
   }
 }
 
-export async function addUserAddress(userId: string, addressData: Partial<Address>): Promise<Address> {
-  const data = await apiRequest<{ success: boolean; data: Address }>("/users/address/add", {
-    method: "POST",
-    body: JSON.stringify({
-      userId,
-      address: addressData.address,
-      state: addressData.state,
-      city: addressData.city,
-      pincode: addressData.pincode,
-    }),
-  })
-  return data.data
+// Add user address function
+export async function addUserAddress(
+  userId: string,
+  addressData: {
+    address: string
+    state: string
+    city: string
+    pincode: string
+  },
+): Promise<any> {
+  try {
+    const response = await apiRequest("/users/address/add", {
+      method: "POST",
+      body: JSON.stringify({
+        userId,
+        ...addressData,
+      }),
+    })
+    return response.data || response
+  } catch (error) {
+    console.error("Error adding user address:", error)
+    throw error
+  }
 }
 
 export async function updateUserAddress(addressId: string, addressData: Partial<Address>): Promise<Address> {
@@ -662,28 +674,44 @@ export async function removeFromCart(userId: string, productId: string): Promise
 }
 
 // New specific quantity management functions
-export async function increaseCartQuantity(userId: string, productId: string): Promise<void> {
-  console.log("Increasing cart quantity:", { userId, productId })
+export async function increaseCartQuantity(userId: string, productId: string): Promise<any> {
+  try {
+    const response = await apiRequest("/users/cart/increase-quantity", {
+      method: "POST",
+      body: JSON.stringify({
+        userId,
+        productId,
+      }),
+    })
 
-  await apiRequest("/users/cart/increase-quantity", {
-    method: "POST",
-    body: JSON.stringify({ userId, productId }),
-  })
+    // Dispatch cart update event after successful increase
+    dispatchCartUpdateEvent()
 
-  // Dispatch cart update event after successful increase
-  dispatchCartUpdateEvent()
+    return response
+  } catch (error) {
+    console.error("Error increasing cart quantity:", error)
+    throw error
+  }
 }
 
-export async function decreaseCartQuantity(userId: string, productId: string): Promise<void> {
-  console.log("Decreasing cart quantity:", { userId, productId })
+export async function decreaseCartQuantity(userId: string, productId: string): Promise<any> {
+  try {
+    const response = await apiRequest("/users/cart/decrease-quantity", {
+      method: "POST",
+      body: JSON.stringify({
+        userId,
+        productId,
+      }),
+    })
 
-  await apiRequest("/users/cart/decrease-quantity", {
-    method: "POST",
-    body: JSON.stringify({ userId, productId }),
-  })
+    // Dispatch cart update event after successful decrease
+    dispatchCartUpdateEvent()
 
-  // Dispatch cart update event after successful decrease
-  dispatchCartUpdateEvent()
+    return response
+  } catch (error) {
+    console.error("Error decreasing cart quantity:", error)
+    throw error
+  }
 }
 
 // Keep the old updateCartItem function for backward compatibility
@@ -838,5 +866,3 @@ export async function updateUserPassword(userId: string, oldPassword: string, ne
     throw error
   }
 }
-
-// Add these exports at the end of the file

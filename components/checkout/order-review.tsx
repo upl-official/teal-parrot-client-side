@@ -5,7 +5,13 @@ import Image from "next/image"
 import Link from "next/link"
 import { Minus, Plus, Ruler } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { updateCartItem, removeFromCart, getCurrentUserId, fetchProductById } from "@/lib/api"
+import {
+  removeFromCart,
+  getCurrentUserId,
+  fetchProductById,
+  increaseCartQuantity,
+  decreaseCartQuantity,
+} from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import type { CartItem } from "@/lib/types"
 import { formatPrice } from "@/lib/utils"
@@ -65,8 +71,47 @@ export function OrderReview({ cartItems, onNext }: OrderReviewProps) {
     fetchCompleteDetails()
   }, [cartItems])
 
-  const handleQuantityChange = async (productId: string, newQuantity: number) => {
-    if (newQuantity < 1) return
+  const handleIncreaseQuantity = async (productId: string) => {
+    try {
+      setLoading((prev) => ({ ...prev, [productId]: true }))
+
+      const userId = getCurrentUserId()
+      if (!userId) {
+        toast({
+          title: "Error",
+          description: "Please log in to update your cart",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // Optimistically update UI
+      setItems((prev) =>
+        prev.map((item) => (item.product._id === productId ? { ...item, quantity: item.quantity + 1 } : item)),
+      )
+
+      await increaseCartQuantity(userId, productId)
+
+      toast({
+        title: "Cart updated",
+        description: "Item quantity has been increased",
+      })
+    } catch (error) {
+      console.error("Error increasing quantity:", error)
+      // Revert optimistic update on error
+      setItems(cartItems)
+      toast({
+        title: "Error",
+        description: "Failed to update quantity. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setLoading((prev) => ({ ...prev, [productId]: false }))
+    }
+  }
+
+  const handleDecreaseQuantity = async (productId: string, currentQuantity: number) => {
+    if (currentQuantity <= 1) return
 
     try {
       setLoading((prev) => ({ ...prev, [productId]: true }))
@@ -81,18 +126,21 @@ export function OrderReview({ cartItems, onNext }: OrderReviewProps) {
         return
       }
 
-      await updateCartItem(userId, productId, newQuantity)
-
+      // Optimistically update UI
       setItems((prev) =>
-        prev.map((item) => (item.product._id === productId ? { ...item, quantity: newQuantity } : item)),
+        prev.map((item) => (item.product._id === productId ? { ...item, quantity: item.quantity - 1 } : item)),
       )
+
+      await decreaseCartQuantity(userId, productId)
 
       toast({
         title: "Cart updated",
-        description: "Item quantity has been updated",
+        description: "Item quantity has been decreased",
       })
     } catch (error) {
-      console.error("Error updating cart item:", error)
+      console.error("Error decreasing quantity:", error)
+      // Revert optimistic update on error
+      setItems(cartItems)
       toast({
         title: "Error",
         description: "Failed to update quantity. Please try again.",
@@ -190,7 +238,7 @@ export function OrderReview({ cartItems, onNext }: OrderReviewProps) {
 
                 <div className="flex items-center mt-2 border border-gray-300 rounded">
                   <button
-                    onClick={() => handleQuantityChange(item.product._id, item.quantity - 1)}
+                    onClick={() => handleDecreaseQuantity(item.product._id, item.quantity)}
                     className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                     disabled={item.quantity <= 1 || loading[item.product._id]}
                   >
@@ -200,7 +248,7 @@ export function OrderReview({ cartItems, onNext }: OrderReviewProps) {
                   <span className="px-4 py-1 border-x border-gray-300">{item.quantity}</span>
 
                   <button
-                    onClick={() => handleQuantityChange(item.product._id, item.quantity + 1)}
+                    onClick={() => handleIncreaseQuantity(item.product._id)}
                     className="px-3 py-1 text-gray-600 hover:bg-gray-100 disabled:opacity-50"
                     disabled={loading[item.product._id]}
                   >

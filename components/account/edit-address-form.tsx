@@ -13,10 +13,10 @@ import { updateUserAddress } from "@/lib/api"
 import type { Address } from "@/lib/types"
 
 const addressSchema = z.object({
-  address: z.string().min(5, "Address must be at least 5 characters"),
-  city: z.string().min(2, "City must be at least 2 characters"),
-  state: z.string().min(2, "State must be at least 2 characters"),
-  pincode: z.string().min(5, "Pincode must be at least 5 characters"),
+  address: z.string().min(5, "Please enter a valid address"),
+  city: z.string().min(2, "Please enter a valid City name"),
+  state: z.string().min(2, "Please enter a valid State"),
+  pincode: z.string().min(6, "Please enter a valid pincode"),
 })
 
 type AddressFormValues = z.infer<typeof addressSchema>
@@ -92,7 +92,7 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
               <FormItem>
                 <FormLabel>Address</FormLabel>
                 <FormControl>
-                  <Input placeholder="123 Main St, Apt 4B" {...field} />
+                  <Input placeholder="House No., Apartment No." {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -107,7 +107,7 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
                 <FormItem>
                   <FormLabel>City</FormLabel>
                   <FormControl>
-                    <Input placeholder="New York" {...field} />
+                    <Input placeholder="City" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -121,7 +121,7 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
                 <FormItem>
                   <FormLabel>State</FormLabel>
                   <FormControl>
-                    <Input placeholder="NY" {...field} />
+                    <Input placeholder="State" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -136,7 +136,7 @@ export function EditAddressForm({ address, onAddressUpdated, onCancel }: EditAdd
               <FormItem>
                 <FormLabel>Pincode</FormLabel>
                 <FormControl>
-                  <Input placeholder="10001" {...field} />
+                  <Input placeholder="Pincode" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

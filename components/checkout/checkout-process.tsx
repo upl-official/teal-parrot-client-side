@@ -20,7 +20,9 @@ import {
   fetchUserAddresses,
   fetchProductById,
   validateCoupon,
-  updateCartItem,
+  increaseCartQuantity,
+  decreaseCartQuantity,
+  removeFromCart,
 } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -54,6 +56,9 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
   const [processingPayment, setProcessingPayment] = useState(false)
   const [redirectingToPayment, setRedirectingToPayment] = useState(false)
 
+  // Quantity adjustment loading states
+  const [quantityLoading, setQuantityLoading] = useState<Record<string, boolean>>({})
+
   // Coupon states
   const [couponCode, setCouponCode] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null)
@@ -73,7 +78,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
   // Calculate shipping cost based on selected method
   const shippingCost = selectedShipping === "express" ? 100 : 0
 
-  // Calculate subtotal
+  // Calculate subtotal with real-time updates
   const subtotal =
     directPurchase && directPurchase.product
       ? directPurchase.product.price * directPurchase.quantity
@@ -82,7 +87,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
   // Calculate discount from coupon validation result
   const discount = couponValidationResult?.isValid ? couponValidationResult.discountAmount || 0 : 0
 
-  // Calculate total
+  // Calculate total with real-time updates
   const total = subtotal - discount + shippingCost
 
   useEffect(() => {
@@ -208,6 +213,262 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
 
     fetchData()
   }, [directProductId, directQuantity])
+
+  // Handle dynamic address addition
+  const handleAddressAdded = (newAddress: Address) => {
+    setAddresses((prev) => [...prev, newAddress])
+    setSelectedAddress(newAddress._id)
+  }
+
+  // Handle quantity increase with real-time updates
+  const handleIncreaseQuantity = async (productId: string) => {
+    try {
+      setQuantityLoading((prev) => ({ ...prev, [productId]: true }))
+
+      const userId = getCurrentUserId()
+      if (!userId) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to update quantities",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // For direct purchase
+      if (directPurchase && directPurchase.productId === productId) {
+        // Optimistically update UI for direct purchase
+        setDirectPurchase((prev) => (prev ? { ...prev, quantity: prev.quantity + 1 } : prev))
+
+        toast({
+          title: "Quantity Updated",
+          description: "Item quantity has been increased",
+        })
+        return
+      }
+
+      // For cart items - optimistically update UI first
+      setCartItems((prev) =>
+        prev.map((item) => (item.product._id === productId ? { ...item, quantity: item.quantity + 1 } : item)),
+      )
+
+      // Make API call
+      await increaseCartQuantity(userId, productId)
+
+      toast({
+        title: "Quantity Updated",
+        description: "Item quantity has been increased",
+      })
+
+      // Re-validate coupon if applied (since subtotal changed)
+      if (appliedCoupon) {
+        await revalidateCoupon()
+      }
+    } catch (error) {
+      console.error("Error increasing quantity:", error)
+
+      // Revert optimistic update on error
+      if (directPurchase && directPurchase.productId === productId) {
+        setDirectPurchase((prev) => (prev ? { ...prev, quantity: Math.max(1, prev.quantity - 1) } : prev))
+      } else {
+        setCartItems((prev) =>
+          prev.map((item) =>
+            item.product._id === productId ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item,
+          ),
+        )
+      }
+
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update quantity. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setQuantityLoading((prev) => ({ ...prev, [productId]: false }))
+    }
+  }
+
+  // Handle quantity decrease with real-time updates
+  const handleDecreaseQuantity = async (productId: string, currentQuantity: number) => {
+    if (currentQuantity <= 1) {
+      toast({
+        title: "Minimum Quantity",
+        description: "Quantity cannot be less than 1. Use remove to delete the item.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setQuantityLoading((prev) => ({ ...prev, [productId]: true }))
+
+      const userId = getCurrentUserId()
+      if (!userId) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to update quantities",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // For direct purchase
+      if (directPurchase && directPurchase.productId === productId) {
+        if (directPurchase.quantity <= 1) {
+          toast({
+            title: "Minimum Quantity",
+            description: "Quantity cannot be less than 1",
+            variant: "destructive",
+          })
+          return
+        }
+
+        // Optimistically update UI for direct purchase
+        setDirectPurchase((prev) => (prev ? { ...prev, quantity: Math.max(1, prev.quantity - 1) } : prev))
+
+        toast({
+          title: "Quantity Updated",
+          description: "Item quantity has been decreased",
+        })
+        return
+      }
+
+      // For cart items - optimistically update UI first
+      setCartItems((prev) =>
+        prev.map((item) =>
+          item.product._id === productId ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item,
+        ),
+      )
+
+      // Make API call
+      await decreaseCartQuantity(userId, productId)
+
+      toast({
+        title: "Quantity Updated",
+        description: "Item quantity has been decreased",
+      })
+
+      // Re-validate coupon if applied (since subtotal changed)
+      if (appliedCoupon) {
+        await revalidateCoupon()
+      }
+    } catch (error) {
+      console.error("Error decreasing quantity:", error)
+
+      // Revert optimistic update on error
+      if (directPurchase && directPurchase.productId === productId) {
+        setDirectPurchase((prev) => (prev ? { ...prev, quantity: prev.quantity + 1 } : prev))
+      } else {
+        setCartItems((prev) =>
+          prev.map((item) => (item.product._id === productId ? { ...item, quantity: item.quantity + 1 } : item)),
+        )
+      }
+
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update quantity. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setQuantityLoading((prev) => ({ ...prev, [productId]: false }))
+    }
+  }
+
+  // Handle item removal
+  const handleRemoveItem = async (productId: string) => {
+    try {
+      setQuantityLoading((prev) => ({ ...prev, [productId]: true }))
+
+      const userId = getCurrentUserId()
+      if (!userId) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in to remove items",
+          variant: "destructive",
+        })
+        return
+      }
+
+      // For direct purchase, redirect to cart or collection
+      if (directPurchase && directPurchase.productId === productId) {
+        toast({
+          title: "Item Removed",
+          description: "Redirecting to collection page...",
+        })
+        router.push("/collection")
+        return
+      }
+
+      // Optimistically update UI
+      const removedItem = cartItems.find((item) => item.product._id === productId)
+      setCartItems((prev) => prev.filter((item) => item.product._id !== productId))
+
+      // Make API call
+      await removeFromCart(userId, productId)
+
+      toast({
+        title: "Item Removed",
+        description: "The item has been removed from your cart",
+      })
+
+      // Check if cart is now empty
+      if (cartItems.length === 1) {
+        setError("Your cart is empty")
+      }
+
+      // Re-validate coupon if applied (since subtotal changed)
+      if (appliedCoupon) {
+        await revalidateCoupon()
+      }
+    } catch (error) {
+      console.error("Error removing item:", error)
+
+      // Revert optimistic update on error
+      const removedItem = cartItems.find((item) => item.product._id === productId)
+      if (removedItem) {
+        setCartItems((prev) => [...prev, removedItem])
+      }
+
+      toast({
+        title: "Error",
+        description: "Failed to remove item. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setQuantityLoading((prev) => ({ ...prev, [productId]: false }))
+    }
+  }
+
+  // Re-validate coupon when quantities change
+  const revalidateCoupon = async () => {
+    if (!appliedCoupon) return
+
+    try {
+      const itemsForValidation =
+        directPurchase && directPurchase.product
+          ? [
+              {
+                product: directPurchase.product,
+                quantity: directPurchase.quantity,
+              },
+            ]
+          : cartItems
+
+      const validation = await validateCoupon(appliedCoupon.code, subtotal, itemsForValidation)
+      setCouponValidationResult(validation)
+
+      if (!validation.isValid) {
+        setAppliedCoupon(null)
+        toast({
+          title: "Coupon No Longer Valid",
+          description: validation.message,
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error revalidating coupon:", error)
+    }
+  }
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) {
@@ -414,8 +675,6 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
       }
 
       // Check if we're in development mode and redirect to test page
-      //const isDevelopment = process.env.NODE_ENV === "development" || window.location.hostname === "localhost" || window.location.hostname === "vusercontent.net"
-
       const isDevelopment = true
 
       if (isDevelopment) {
@@ -730,36 +989,35 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  if (directPurchase.quantity > 1) {
-                                    setDirectPurchase({
-                                      ...directPurchase,
-                                      quantity: directPurchase.quantity - 1,
-                                    })
-                                  }
-                                }}
-                                disabled={directPurchase.quantity <= 1}
+                                onClick={() =>
+                                  handleDecreaseQuantity(directPurchase.productId, directPurchase.quantity)
+                                }
+                                disabled={directPurchase.quantity <= 1 || quantityLoading[directPurchase.productId]}
                               >
-                                <Minus className="h-4 w-4" />
+                                {quantityLoading[directPurchase.productId] ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-t border-gray-400"></div>
+                                ) : (
+                                  <Minus className="h-4 w-4" />
+                                )}
                               </Button>
                               <span className="w-12 text-center font-medium">{directPurchase.quantity}</span>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => {
-                                  setDirectPurchase({
-                                    ...directPurchase,
-                                    quantity: directPurchase.quantity + 1,
-                                  })
-                                }}
+                                onClick={() => handleIncreaseQuantity(directPurchase.productId)}
+                                disabled={quantityLoading[directPurchase.productId]}
                               >
-                                <Plus className="h-4 w-4" />
+                                {quantityLoading[directPurchase.productId] ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-t border-gray-400"></div>
+                                ) : (
+                                  <Plus className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
                           </div>
                         )
                       : cartItems.map((item, index) => (
-                          <div key={index} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
+                          <div key={item.product._id} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
                             <img
                               src={item.product.images[0] || "/images/tp-placeholder-img.jpg"}
                               alt={item.product.name}
@@ -773,68 +1031,42 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={async () => {
-                                  if (item.quantity > 1) {
-                                    const newQuantity = item.quantity - 1
-                                    try {
-                                      const userId = getCurrentUserId()
-                                      await updateCartItem(userId, item.product._id, newQuantity)
-                                      setCartItems((prev) =>
-                                        prev.map((cartItem) =>
-                                          cartItem.product._id === item.product._id
-                                            ? { ...cartItem, quantity: newQuantity }
-                                            : cartItem,
-                                        ),
-                                      )
-                                      toast({
-                                        title: "Quantity Updated",
-                                        description: "Item quantity has been decreased",
-                                      })
-                                    } catch (error) {
-                                      toast({
-                                        title: "Error",
-                                        description: "Failed to update quantity",
-                                        variant: "destructive",
-                                      })
-                                    }
-                                  }
-                                }}
-                                disabled={item.quantity <= 1}
+                                onClick={() => handleDecreaseQuantity(item.product._id, item.quantity)}
+                                disabled={item.quantity <= 1 || quantityLoading[item.product._id]}
                               >
-                                <Minus className="h-4 w-4" />
+                                {quantityLoading[item.product._id] ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-t border-gray-400"></div>
+                                ) : (
+                                  <Minus className="h-4 w-4" />
+                                )}
                               </Button>
                               <span className="w-12 text-center font-medium">{item.quantity}</span>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={async () => {
-                                  const newQuantity = item.quantity + 1
-                                  try {
-                                    const userId = getCurrentUserId()
-                                    await updateCartItem(userId, item.product._id, newQuantity)
-                                    setCartItems((prev) =>
-                                      prev.map((cartItem) =>
-                                        cartItem.product._id === item.product._id
-                                          ? { ...cartItem, quantity: newQuantity }
-                                          : cartItem,
-                                      ),
-                                    )
-                                    toast({
-                                      title: "Quantity Updated",
-                                      description: "Item quantity has been increased",
-                                    })
-                                  } catch (error) {
-                                    toast({
-                                      title: "Error",
-                                      description: "Failed to update quantity",
-                                      variant: "destructive",
-                                    })
-                                  }
-                                }}
+                                onClick={() => handleIncreaseQuantity(item.product._id)}
+                                disabled={quantityLoading[item.product._id]}
                               >
-                                <Plus className="h-4 w-4" />
+                                {quantityLoading[item.product._id] ? (
+                                  <div className="animate-spin rounded-full h-3 w-3 border-t border-gray-400"></div>
+                                ) : (
+                                  <Plus className="h-4 w-4" />
+                                )}
                               </Button>
                             </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveItem(item.product._id)}
+                              disabled={quantityLoading[item.product._id]}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              {quantityLoading[item.product._id] ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-t border-red-400"></div>
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
                           </div>
                         ))}
                   </div>
@@ -944,6 +1176,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
                   setSelectedShipping={setSelectedShipping}
                   onNext={handlePlaceOrder}
                   onPrevious={handlePreviousStep}
+                  onAddressAdded={handleAddressAdded}
                   isProcessing={processingPayment}
                 />
               </motion.div>
