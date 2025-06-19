@@ -675,7 +675,10 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
       }
 
       // Check if we're in development mode and redirect to test page
-      const isDevelopment = true
+      const isDevelopment = process.env.NODE_ENV === "development" || window.location.hostname === "localhost" || window.location.hostname === "vusercontent.net"
+
+      // Check if we're in development mode and redirect to test page
+      //const isDevelopment = true
 
       if (isDevelopment) {
         // Prepare comprehensive order data for test page
