@@ -675,7 +675,7 @@ export function CheckoutProcess({ directProductId, directQuantity }: CheckoutPro
       }
 
       // Check if we're in development mode and redirect to test page
-      const isDevelopment = process.env.NODE_ENV === "development" || window.location.hostname === "localhost" || window.location.hostname === "vusercontent.net"
+      const isDevelopment = process.env.NEXT_PUBLIC_NODE_ENV === "development" || window.location.hostname === "localhost" || window.location.hostname === "vusercontent.net"
 
       // Check if we're in development mode and redirect to test page
       //const isDevelopment = true
